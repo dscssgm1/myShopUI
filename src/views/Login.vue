@@ -1,9 +1,7 @@
 <template>
   <div class="auth-page">
     <el-card class="auth-card">
-      <div class="logo">🛒 myShop</div>
       <h2>账号登录</h2>
-
       <el-form :model="form" :rules="rules" ref="formRef" label-position="top">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="请输入用户名" />
@@ -28,10 +26,27 @@
       </div>
 
       <el-divider>演示账号（密码 123456）</el-divider>
-      <div class="demo">
-        <el-button size="small" @click="quickLogin('buyer')">🙋 买家</el-button>
-        <el-button size="small" @click="quickLogin('merchant')">🏪 商家</el-button>
-        <el-button size="small" @click="quickLogin('admin')">🛠️ 管理员</el-button>
+      <div class="quick">
+        <div class="q-row"><span class="q-label">用户端</span><el-button size="small" @click="quick('buyer')">🙋 买家</el-button></div>
+        <div class="q-row">
+          <span class="q-label">商家端</span>
+          <el-button size="small" @click="quick('merchant')">🏪 店长</el-button>
+          <el-button size="small" @click="quick('sales')">👔 业务员</el-button>
+          <el-button size="small" @click="quick('shopcs')">🎧 客服</el-button>
+        </div>
+        <div class="q-row">
+          <span class="q-label">物流端</span>
+          <el-button size="small" @click="quick('logistics')">🚚 管理员</el-button>
+          <el-button size="small" @click="quick('ltops')">📦 调度员</el-button>
+          <el-button size="small" @click="quick('courier')">🛵 快递员</el-button>
+        </div>
+        <div class="q-row">
+          <span class="q-label">平台端</span>
+          <el-button size="small" @click="quick('admin')">🛠️ 管理员</el-button>
+          <el-button size="small" @click="quick('ops')">📋 业务员</el-button>
+          <el-button size="small" @click="quick('ptcs')">🛡️ 客服</el-button>
+          <el-button size="small" @click="quick('devops')">🔧 运维员</el-button>
+        </div>
       </div>
     </el-card>
   </div>
@@ -39,11 +54,12 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../store/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const formRef = ref()
@@ -59,7 +75,7 @@ async function doLogin(username, password) {
   try {
     await userStore.login(username, password)
     ElMessage.success('登录成功')
-    router.push('/home')
+    router.push(route.query.redirect || '/')
   } finally {
     loading.value = false
   }
@@ -67,34 +83,23 @@ async function doLogin(username, password) {
 
 function submit() {
   formRef.value.validate((ok) => {
-    if (ok) {
-      doLogin(form.username, form.password)
-    }
+    if (ok) doLogin(form.username, form.password)
   })
 }
 
-function quickLogin(username) {
+function quick(username) {
   doLogin(username, '123456')
 }
 </script>
 
 <style scoped>
 .auth-page {
-  min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+  padding: 48px 0;
 }
 .auth-card {
-  width: 400px;
-}
-.logo {
-  font-size: 26px;
-  font-weight: 700;
-  color: #ff4b2b;
-  text-align: center;
-  margin-bottom: 4px;
+  width: 420px;
 }
 h2 {
   text-align: center;
@@ -105,11 +110,23 @@ h2 {
   justify-content: space-between;
   margin-top: 14px;
   font-size: 13px;
-  color: #396afc;
+  color: #ff4b2b;
 }
-.demo {
+.quick {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+}
+.q-row {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+.q-label {
+  width: 52px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #999;
 }
 </style>

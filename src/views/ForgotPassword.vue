@@ -104,11 +104,9 @@ function submit() {
 
 <style scoped>
 .auth-page {
-  min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #11998e, #38ef7d);
+  padding: 48px 0;
 }
 .auth-card {
   width: 420px;
@@ -138,6 +136,6 @@ h2 {
   color: #666;
 }
 .to-login a {
-  color: #11998e;
+  color: #ff4b2b;
 }
 </style>

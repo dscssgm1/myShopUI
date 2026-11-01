@@ -50,12 +50,7 @@ const countdown = ref(0)
 let timer = null
 
 const form = reactive({
-  username: '',
-  nickname: '',
-  email: '',
-  emailCode: '',
-  password: '',
-  confirm: ''
+  username: '', nickname: '', email: '', emailCode: '', password: '', confirm: ''
 })
 
 const rules = {
@@ -123,11 +118,9 @@ function submit() {
 
 <style scoped>
 .auth-page {
-  min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #396afc, #2948ff);
+  padding: 48px 0;
 }
 .auth-card {
   width: 420px;
@@ -151,6 +144,6 @@ h2 {
   color: #666;
 }
 .to-login a {
-  color: #396afc;
+  color: #ff4b2b;
 }
 </style>

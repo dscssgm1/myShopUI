@@ -1,8 +1,12 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
+/**
+ * 统一请求封装：baseURL 指向网关 /api，
+ * 各业务 API 在自己的模块里拼接服务前缀（如 /system、/products）。
+ */
 const request = axios.create({
-  baseURL: '/api/system',
+  baseURL: '/api',
   timeout: 10000
 })
 
@@ -28,8 +32,19 @@ request.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const message = error.response?.data?.message
+    const url = error.config?.url || ''
+    // 商品/分类/品牌等公开浏览接口：未登录不应被强制跳转登录页
+    const isPublic = url.startsWith('/products') || url.startsWith('/categories') || url.startsWith('/brands')
+
     if (status === 401) {
-      ElMessage.error(message || '登录已过期，请重新登录')
+      if (!isPublic) {
+        ElMessage.error(message || '登录已过期，请重新登录')
+        localStorage.removeItem('myshop_token')
+        localStorage.removeItem('myshop_user')
+        if (!location.pathname.startsWith('/login')) {
+          location.href = '/login'
+        }
+      }
     } else {
       ElMessage.error(message || '网络异常，请稍后重试')
     }
