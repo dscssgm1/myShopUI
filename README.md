@@ -1,31 +1,48 @@
 # myShop 电商购物平台 · 前端
 
-myShop 是一个多角色电商购物平台，本项目为其 Web 前端，基于 Vue 3 + Vite + Element Plus + Pinia + Vue Router 开发，采用前后端分离架构，通过 API 与 [myShop](../myShop) 后端服务交互。
+myShop 是一个多角色电商购物平台，本项目为其 Web 前端，基于 Vue 3 + Vite + Element Plus + Pinia + Vue Router + Axios 开发，通过网关 API 与 [myShop](../myShop) 后端交互。
 
-## 平台角色
+## 已实现
 
-- **买家**：浏览商品、购物车、下单支付、订单跟踪、商品评价、领取优惠
-- **商家**：经营概况、商品管理、订单处理
-- **管理员**：平台数据看板，以及商品、订单、用户、商家、促销活动的统一管理
+- **登录**：用户名 + 密码，登录成功后签发 JWT，令牌存入 localStorage；
+- **注册**：用户名 / 昵称 / 邮箱 / 密码，需**邮箱验证码**（发送验证码 → 注册校验）；
+- **找回密码**：输入注册邮箱 → 发送验证码 → 凭验证码重置密码。
 
-## 主要功能
+## 目录结构
 
-- **商城前台**：首页、商品列表（搜索/筛选/排序）、商品详情、活动会场与领券中心
-- **购物流程**：登录注册、购物车、确认订单、收银台、我的订单、我的评价
-- **商家中心**：经营概况、商品管理、订单管理
-- **系统管理**：数据看板，以及商品、订单、用户、商家、活动管理
+```
+src/
+├── api/
+│   ├── request.js      # axios 封装（拦截器：注入 token、统一处理 Result）
+│   └── auth.js         # 登录/注册/验证码/找回密码/重置密码接口
+├── store/user.js       # Pinia：登录态与用户信息
+├── router/index.js     # 路由 + 登录守卫
+└── views/
+    ├── Login.vue
+    ├── Register.vue
+    ├── ForgotPassword.vue
+    └── Home.vue        # 登录后占位页
+```
 
-## 技术栈
+## 启动
 
-- Vue 3
-- Vite
-- Element Plus
-- Pinia
-- Vue Router
+```bash
+npm install
+npm run dev     # http://localhost:5173，/api 代理到网关 http://localhost:8080
+npm run build
+```
 
-## 相关项目
+## 对接的后端接口（myShop-system）
 
-| 项目 | 说明 |
+| 接口 | 说明 |
 |------|------|
-| [myShop](../myShop) | 后端服务（Java 21 + Maven） |
-| [Prototype](../Prototype) | 界面与交互原型，可作为开发参考 |
+| `POST /api/system/auth/login` | 登录 |
+| `POST /api/system/auth/register` | 注册（需邮箱验证码） |
+| `POST /api/system/auth/email-code` | 发送邮箱验证码（purpose=REGISTER） |
+| `POST /api/system/auth/password/forgot` | 忘记密码发送验证码 |
+| `POST /api/system/auth/password/reset` | 重置密码 |
+
+## 说明
+
+- 后端 `myshop.security.email-code.debug=true`（默认）时，验证码直接随响应返回，前端会以"调试"提示展示；生产环境关闭后改为邮件投递；
+- 令牌过期（401）由拦截器统一提示。
