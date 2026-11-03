@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login as loginApi } from '../api/auth'
+import { login as loginApi, logout as logoutApi } from '../api/auth'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -18,7 +18,13 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem('myshop_user', JSON.stringify(this.user))
       return this.user
     },
-    logout() {
+    /** 退出登录：先通知服务端销毁会话（令牌立即失效），再清理本地状态 */
+    async logout() {
+      try {
+        if (this.token) await logoutApi()
+      } catch {
+        // 令牌已过期 / 会话已被下线时同样清理本地状态
+      }
       this.token = ''
       this.user = null
       localStorage.removeItem('myshop_token')

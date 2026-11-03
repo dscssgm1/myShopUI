@@ -2,8 +2,8 @@ import request from './request'
 
 // ==================== 购物车 ====================
 
-export function fetchCart() {
-  return request.get('/cart')
+export function fetchCart(config = {}) {
+  return request.get('/cart', config)
 }
 
 export function addToCart(productId, quantity = 1, skuId = null) {
@@ -48,6 +48,16 @@ export function confirmShopOrder(orderNo) {
   return request.post(`/orders/${orderNo}/confirm`)
 }
 
+// ==================== 商品佣金（商家账单） ====================
+
+export function fetchCommissionSummary() {
+  return request.get('/orders/commission/merchant/summary')
+}
+
+export function fetchMyCommissionRecords(params) {
+  return request.get('/orders/commission/merchant/page', { params })
+}
+
 // ==================== 支付 ====================
 
 export function createPayment(orderNo, channel) {
@@ -64,6 +74,6 @@ export function fetchAddresses() {
   return request.get('/system/addresses')
 }
 
-export function fetchMemberProfile() {
-  return request.get('/system/member/profile')
+export function fetchMemberProfile(config = {}) {
+  return request.get('/system/member/profile', config)
 }

@@ -57,6 +57,7 @@ import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../store/user'
+import { promptTrustDevice, takeVerifyToken } from '../utils/trust'
 
 const router = useRouter()
 const route = useRoute()
@@ -76,6 +77,8 @@ async function doLogin(username, password) {
     await userStore.login(username, password)
     ElMessage.success('登录成功')
     router.push(route.query.redirect || '/')
+    // 注册/找回密码时验证过邮箱：登录后询问是否信任此设备
+    promptTrustDevice(takeVerifyToken())
   } finally {
     loading.value = false
   }

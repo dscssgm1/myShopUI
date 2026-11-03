@@ -42,6 +42,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { register as registerApi, sendEmailCode } from '../api/auth'
+import { rememberVerifyToken } from '../utils/trust'
 
 const router = useRouter()
 const formRef = ref()
@@ -106,7 +107,10 @@ function submit() {
       emailCode: form.emailCode,
       password: form.password
     })
-      .then(() => {
+      .then((result) => {
+        // 注册时邮箱验证码已验证：暂存凭证，登录后提示「是否信任此设备」
+        const token = result.data?.deviceVerifyToken
+        if (token) rememberVerifyToken(token)
         ElMessage.success('注册成功，请登录')
         router.push('/login')
       })

@@ -1,15 +1,40 @@
 <template>
   <div v-if="shop" class="shop-page">
     <div class="shop-head" :style="{ background: shop.color }">
-      <div class="shop-logo">{{ shop.icon || '🏪' }}</div>
+      <div class="shop-logo">
+        <img v-if="iconIsImage" :src="shop.icon" alt="" />
+        <span v-else>{{ shop.icon || '🏪' }}</span>
+      </div>
       <div class="shop-info">
         <div class="shop-name">{{ shop.name }}</div>
-        <div class="shop-desc">{{ shop.description }}</div>
+        <div class="shop-desc" :title="shop.description">{{ shop.description }}</div>
         <div class="shop-meta">
           <span>🏷️ {{ (shop.categories || []).join('、') || '综合' }}</span>
           <span>📍 {{ shop.region || '—' }}</span>
           <span>📦 累计销量 {{ shop.sales || 0 }}</span>
+          <span>⭐ 店铺评分 {{ shop.rating != null ? shop.rating : '暂无评分' }}</span>
         </div>
+      </div>
+    </div>
+
+    <!-- 资质公示：所有用户可见 -->
+    <div v-if="shop.licenseNo" class="license-section">
+      <div class="license-title">资质信息</div>
+      <div class="license-body">
+        <div class="license-rows">
+          <div class="license-row"><span class="k">企业名称</span><span>{{ shop.name }}</span></div>
+          <div class="license-row"><span class="k">法定代表人</span><span>{{ shop.legalPerson || '—' }}</span></div>
+          <div class="license-row"><span class="k">经营许可证号</span><span>{{ shop.licenseNo }}</span></div>
+          <div class="license-row"><span class="k">营业期限</span><span>{{ shop.businessTerm || '—' }}</span></div>
+          <div class="license-row"><span class="k">注册地址</span><span>{{ shop.registeredAddress || '—' }}</span></div>
+          <div class="license-row"><span class="k">经营范围</span><span>{{ shop.businessScope || '—' }}</span></div>
+        </div>
+        <el-image
+          v-if="shop.licenseImage"
+          :src="shop.licenseImage"
+          :preview-src-list="[shop.licenseImage]"
+          preview-teleported fit="cover" class="license-img"
+        />
       </div>
     </div>
 
@@ -31,7 +56,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import { fetchShop, fetchShopProducts } from '../api/shop'
@@ -43,6 +68,9 @@ const total = ref(0)
 const page = ref(1)
 const size = 12
 const loading = ref(false)
+
+// 店铺标识：图片 URL 直接展示，旧 emoji 数据回退为文字
+const iconIsImage = computed(() => /^https?:\/\/|^\//.test(shop.value?.icon || ''))
 
 onMounted(load)
 watch(() => route.params.id, load)
@@ -72,6 +100,45 @@ async function loadGoods() {
   border-radius: 10px;
   overflow: hidden;
 }
+.license-section {
+  margin: 0 36px;
+  padding: 16px 0;
+  border-top: 1px dashed #eee;
+}
+.license-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+.license-body {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.license-rows {
+  flex: 1;
+  min-width: 0;
+}
+.license-row {
+  display: flex;
+  font-size: 13px;
+  color: #666;
+  line-height: 2;
+}
+.license-row .k {
+  width: 96px;
+  flex-shrink: 0;
+  color: #999;
+}
+.license-img {
+  width: 140px;
+  height: 100px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  border: 1px solid #eee;
+  cursor: zoom-in;
+}
 .shop-head {
   display: flex;
   align-items: center;
@@ -89,18 +156,29 @@ async function loadGoods() {
   justify-content: center;
   font-size: 42px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.shop-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .shop-info {
   flex: 1;
+  min-width: 0;
 }
 .shop-name {
   font-size: 26px;
   font-weight: 700;
 }
+/* 简介超长时单行省略，悬停经 title 看全文，避免横幅被撑高 */
 .shop-desc {
   font-size: 14px;
   opacity: 0.9;
   margin: 6px 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .shop-meta {
   display: flex;

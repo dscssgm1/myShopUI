@@ -37,6 +37,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { forgotPassword, resetPassword } from '../api/auth'
+import { rememberVerifyToken } from '../utils/trust'
 
 const router = useRouter()
 const formRef = ref()
@@ -92,7 +93,10 @@ function submit() {
       code: form.code,
       newPassword: form.newPassword
     })
-      .then(() => {
+      .then((result) => {
+        // 验证码已验证：暂存凭证，登录后提示「是否信任此设备」
+        const token = result.data?.verifyToken
+        if (token) rememberVerifyToken(token)
         ElMessage.success('密码已重置，请重新登录')
         router.push('/login')
       })

@@ -1,32 +1,36 @@
 <template>
-  <div class="p-card" @click="$router.push(`/product/${product.id}`)">
+  <!-- 真实链接 + target=_blank：点击在新标签页打开商品详情，Ctrl/中键/右键新开也原生可用 -->
+  <a class="p-card" :class="{ large }" :href="`/product/${product.id}`" target="_blank">
     <div class="p-img" :style="{ background: product.color }">
-      <span>{{ product.emoji }}</span>
-      <div class="p-tags">
-        <i v-for="t in (product.tags || []).slice(0, 2)" :key="t">{{ t }}</i>
-      </div>
+      <img v-if="product.coverImage" :src="product.coverImage" class="p-photo" alt="" />
+      <span v-else>{{ product.emoji }}</span>
     </div>
     <div class="p-body">
       <div class="p-name">{{ product.name }}</div>
-      <div class="p-shop">🏪 {{ product.shopName || '自营' }}</div>
       <div class="p-foot">
         <span class="price">¥{{ displayPrice }}</span>
-        <span v-if="product.originPrice" class="origin">¥{{ product.originPrice }}</span>
         <span class="sales">已售 {{ product.sales }}</span>
       </div>
     </div>
-  </div>
+  </a>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 
-const props = defineProps({ product: { type: Object, required: true } })
+const props = defineProps({
+  product: { type: Object, required: true },
+  /** 大卡规格：首页使用，图片随宽度成正方形，文字同步放大 */
+  large: { type: Boolean, default: false }
+})
 const displayPrice = computed(() => props.product.discountPrice || props.product.price)
 </script>
 
 <style scoped>
 .p-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
@@ -43,22 +47,11 @@ const displayPrice = computed(() => props.product.discountPrice || props.product
   align-items: center;
   justify-content: center;
   font-size: 64px;
-  position: relative;
 }
-.p-tags {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  display: flex;
-  gap: 6px;
-}
-.p-tags i {
-  font-style: normal;
-  font-size: 11px;
-  background: rgba(255, 75, 43, 0.92);
-  color: #fff;
-  padding: 1px 6px;
-  border-radius: 4px;
+.p-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .p-body {
   padding: 10px 12px 12px;
@@ -67,15 +60,11 @@ const displayPrice = computed(() => props.product.discountPrice || props.product
   font-size: 14px;
   line-height: 1.4;
   height: 40px;
+  margin-bottom: 6px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-}
-.p-shop {
-  font-size: 12px;
-  color: #999;
-  margin: 4px 0 6px;
 }
 .p-foot {
   display: flex;
@@ -87,14 +76,28 @@ const displayPrice = computed(() => props.product.discountPrice || props.product
   font-size: 18px;
   font-weight: 700;
 }
-.origin {
-  color: #bbb;
-  font-size: 12px;
-  text-decoration: line-through;
-}
 .sales {
   margin-left: auto;
   font-size: 12px;
   color: #999;
+}
+/* 大卡规格（首页 5 列）：图片随卡片宽度成正方形，文字与价格同步放大 */
+.p-card.large .p-img {
+  height: auto;
+  aspect-ratio: 1 / 1;
+  font-size: 96px;
+}
+.p-card.large .p-body {
+  padding: 14px 16px 16px;
+}
+.p-card.large .p-name {
+  font-size: 17px;
+  height: 48px;
+}
+.p-card.large .price {
+  font-size: 24px;
+}
+.p-card.large .sales {
+  font-size: 13px;
 }
 </style>

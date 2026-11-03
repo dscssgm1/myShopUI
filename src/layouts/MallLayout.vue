@@ -16,65 +16,53 @@
         <div class="right">
           <span class="role">{{ roleLabel }}</span>
           <router-link to="/">首页</router-link>
-          <router-link v-if="userStore.isLogin" to="/user/orders">我的订单</router-link>
+          <template v-if="userStore.isLogin">
+            <router-link to="/user/messages">消息</router-link>
+            <router-link to="/user/orders">我的订单</router-link>
+            <!-- 「我的」下拉：样式与原型一致 -->
+            <div class="mine-entry">
+              <span class="mine-link">我的 <el-icon><ArrowDown /></el-icon></span>
+              <div class="mine-pop">
+                <router-link to="/user/profile">👤 个人信息</router-link>
+                <router-link to="/user/orders">📦 我的订单</router-link>
+                <router-link to="/user/coupons">🎟️ 我的优惠券</router-link>
+                <router-link to="/user/reviews">⭐ 我的评价</router-link>
+                <router-link to="/user/favorites">❤️ 我的收藏</router-link>
+                <router-link to="/user/footprint">🕐 浏览足迹</router-link>
+                <router-link to="/user/address">📍 收货地址</router-link>
+                <router-link to="/points-mall">🎁 积分商城</router-link>
+                <router-link to="/user/more" class="mine-more">🧩 更多功能 ›</router-link>
+                <template v-if="userStore.user?.groupCode === 'LOGISTICS'">
+                  <div class="mine-split" />
+                  <router-link to="/logistics">🚚 物流中心</router-link>
+                </template>
+              </div>
+            </div>
+            <!-- 商家 / 平台管理入口外置，直接展示在「我的」右侧 -->
+            <router-link v-if="userStore.user?.groupCode === 'MERCHANT'" to="/merchant">🏪 商家中心</router-link>
+            <router-link v-if="userStore.user?.groupCode === 'PLATFORM'" to="/admin">🛠️ 平台后台</router-link>
+          </template>
         </div>
       </div>
     </div>
 
-    <!-- 搜索头部 -->
-    <div class="header">
-      <div class="wrap">
-        <router-link to="/" class="logo">🛒 myShop</router-link>
-        <div class="search">
-          <el-input
-            v-model="keyword"
-            size="large"
-            placeholder="搜索商品，如：手机 / 苹果 / 耳机"
-            @keyup.enter="goSearch"
-          >
-            <template #append>
-              <el-button type="primary" @click="goSearch">搜索</el-button>
-            </template>
-          </el-input>
-        </div>
-        <el-badge :value="cartCount" :hidden="!cartCount">
-          <el-button size="large" @click="goCart">🛍️ 购物车</el-button>
-        </el-badge>
-      </div>
-    </div>
-
-    <!-- 主导航：圆角胶囊 + 红线向下展开小类 -->
-    <div class="nav" @mouseleave="hoverCat = null">
-      <div class="wrap nav-row">
-        <div
-          v-for="c in categories"
-          :key="c.id"
-          class="cat-item"
-          :class="{ active: isActiveCategory(c.id), hovered: hoverCat?.id === c.id }"
-          @mouseenter="hoverCat = c"
-        >
-          <router-link class="cat-pill" :to="{ path: '/products', query: { categoryId: c.id } }">
-            {{ c.icon }} {{ c.name }}
-          </router-link>
-        </div>
-        <span class="promo-link">🎉 优惠活动</span>
-      </div>
-
-      <!-- 红线向下展开的面板 -->
-      <div class="nav-panel" :class="{ open: !!hoverCat }">
-        <div class="wrap panel-inner" v-if="hoverCat">
-          <span class="panel-title">{{ hoverCat.icon }} {{ hoverCat.name }}</span>
-          <span class="panel-divider" />
-          <router-link
-            v-for="s in hoverCat.children || []"
-            :key="s.id"
-            class="panel-chip"
-            :to="{ path: '/products', query: { categoryId: hoverCat.id, subCategoryId: s.id } }"
-          >{{ s.name }}</router-link>
-          <router-link
-            class="panel-chip all"
-            :to="{ path: '/products', query: { categoryId: hoverCat.id } }"
-          >全部 {{ hoverCat.name }} →</router-link>
+    <!-- 搜索头部吸顶：随页面滚动始终可见 -->
+    <div class="sticky-head">
+      <div class="header">
+        <div class="wrap">
+          <router-link to="/" class="logo">🛒 myShop</router-link>
+          <div class="search">
+            <el-input
+              v-model="keyword"
+              size="large"
+              placeholder="搜索商品，如：手机 / 苹果 / 耳机"
+              @keyup.enter="goSearch"
+            >
+              <template #append>
+                <el-button type="primary" @click="goSearch">搜索</el-button>
+              </template>
+            </el-input>
+          </div>
         </div>
       </div>
     </div>
@@ -87,10 +75,13 @@
     <!-- 页脚 -->
     <footer class="footer">
       <div class="wrap">
-        <p>myShop 电商购物平台</p>
-        <p>用户端 / 商家端 / 物流端 / 管理端 一站式体验</p>
+        <p>{{ platformName }}</p>
+        <p>客服电话 {{ servicePhone }} · 用户端 / 商家端 / 物流端 / 管理端 一站式体验</p>
       </div>
     </footer>
+
+    <!-- 右侧悬浮工具条：消息 / 购物车 / 客服 / 反馈 / 回到顶部 -->
+    <SideToolbar :cart-count="cartCount" />
   </div>
 </template>
 
@@ -98,17 +89,19 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
-import { fetchCategoryTree } from '../api/product'
+import SideToolbar from '../components/SideToolbar.vue'
 import { fetchCart } from '../api/trade'
+import { fetchPublicConfigMap } from '../api/config'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const keyword = ref('')
-const categories = ref([])
-const hoverCat = ref(null)
+const platformName = ref('myShop 电商购物平台')
+const servicePhone = ref('400-888-8888')
 
 const roleLabel = computed(() => {
   const role = userStore.user?.roleCode
@@ -119,30 +112,26 @@ const roleLabel = computed(() => {
   }[role] || ''
 })
 
-const isActiveCategory = (id) => route.name === 'products' && String(route.query.categoryId) === String(id)
-
 onMounted(() => {
-  fetchCategoryTree()
-    .then((res) => (categories.value = res.data || []))
-    .catch(() => {})
+  loadSiteConfig()
 })
+
+async function loadSiteConfig() {
+  try {
+    const map = await fetchPublicConfigMap('system', { silent: true })
+    if (map.platformName) platformName.value = map.platformName
+    if (map.servicePhone) servicePhone.value = map.servicePhone
+  } catch { /* 使用默认平台信息 */ }
+}
 
 function goSearch() {
   router.push({ path: '/products', query: keyword.value ? { keyword: keyword.value } : {} })
 }
 
-function logout() {
-  userStore.logout()
+async function logout() {
+  await userStore.logout()
   cartCount.value = 0
   router.push('/login')
-}
-
-function goCart() {
-  if (!userStore.isLogin) {
-    router.push({ path: '/login', query: { redirect: '/cart' } })
-    return
-  }
-  router.push('/cart')
 }
 
 const cartCount = ref(0)
@@ -153,7 +142,8 @@ async function loadCartCount() {
     return
   }
   try {
-    const res = await fetchCart()
+    // 购物车角标是后台刷新，订单服务不可用时静默降级，避免每个页面都弹错误
+    const res = await fetchCart({ silent: true })
     cartCount.value = res.data?.totalQuantity || 0
   } catch { cartCount.value = 0 }
 }
@@ -164,14 +154,17 @@ watch(() => route.fullPath, loadCartCount)
 
 <style scoped>
 .wrap {
-  max-width: 1200px;
+  max-width: 1520px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 12px;
 }
 .topbar {
   background: #f0f2f5;
   font-size: 13px;
   color: #666;
+  position: sticky;
+  top: 0;
+  z-index: 101;
 }
 .topbar .wrap {
   display: flex;
@@ -195,6 +188,66 @@ watch(() => route.fullPath, loadCartCount)
 .topbar .role {
   color: #396afc;
 }
+/* 顶部两段（工具栏/搜索栏）吸顶，浏览内容时始终可见 */
+.sticky-head {
+  position: sticky;
+  top: 36px;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+/* 「我的」下拉（样式与原型一致） */
+.mine-entry {
+  position: relative;
+  display: inline-block;
+}
+.mine-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 16px;
+  cursor: pointer;
+}
+.mine-link:hover {
+  color: #ff4b2b;
+}
+.mine-pop {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 180px;
+  margin-top: 0;
+  border-top: 6px solid transparent;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  z-index: 999;
+  overflow: hidden;
+  padding: 6px 0;
+}
+.mine-pop a {
+  display: block;
+  margin-left: 0;
+  padding: 10px 18px;
+  font-size: 13px;
+  color: #333;
+  transition: background 0.15s;
+}
+.mine-pop a:hover {
+  background: #fff8f6;
+  color: #ff4b2b;
+}
+.mine-pop .mine-more {
+  border-top: 1px solid #f0f0f0;
+  color: #ff4b2b;
+  font-weight: 600;
+}
+.mine-pop .mine-split {
+  border-top: 1px solid #f0f0f0;
+}
+.mine-entry:hover .mine-pop {
+  display: block;
+}
 .header {
   background: #fff;
   padding: 18px 0;
@@ -213,96 +266,16 @@ watch(() => route.fullPath, loadCartCount)
 .search {
   flex: 1;
 }
-.nav {
-  background: #fff;
-  border-bottom: 2px solid #ff4b2b;
-  position: relative;
-  z-index: 30;
-}
-.nav-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 10px 16px;
-  height: 58px;
-}
-.cat-pill {
-  display: inline-block;
-  padding: 8px 20px;
-  border-radius: 22px;
-  font-size: 15px;
-  color: #333;
-  transition: background 0.18s, color 0.18s;
-}
-.cat-item.active .cat-pill {
-  background: #ffe3dc;
-  color: #ff4b2b;
-  font-weight: 700;
-}
-.cat-item.hovered .cat-pill {
-  background: #ff4b2b;
-  color: #fff;
-  font-weight: 700;
-}
-.nav-panel {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #ff4b2b;
-  border-radius: 0 0 18px 18px;
-  box-shadow: 0 14px 26px rgba(255, 75, 43, 0.3);
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.25s ease;
-}
-.nav-panel.open {
-  max-height: 120px;
-}
-.panel-inner {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 14px 16px;
-}
-.panel-title {
-  color: #fff;
-  font-weight: 700;
-  font-size: 15px;
-  white-space: nowrap;
-}
-.panel-divider {
-  width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.4);
-}
-.panel-chip {
-  color: #fff;
-  font-size: 13px;
-  padding: 5px 15px;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.2);
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-.panel-chip:hover {
-  background: rgba(255, 255, 255, 0.45);
-}
-.panel-chip.all {
-  background: rgba(0, 0, 0, 0.18);
-  margin-left: auto;
-}
-.promo-link {
-  margin-left: auto;
-  padding: 8px 4px;
-  color: #ff4b2b;
-  font-weight: 600;
-}
 .main {
   min-height: 60vh;
   padding-top: 16px;
   padding-bottom: 32px;
+}
+/* 屏幕不够宽时给右侧悬浮工具条留出位置，避免压住最右一列商品 */
+@media (max-width: 1700px) {
+  .main {
+    padding-right: 92px;
+  }
 }
 .footer {
   background: #2b2f36;

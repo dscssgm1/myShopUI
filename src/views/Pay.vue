@@ -29,20 +29,29 @@
 
       <el-card shadow="never" class="block">
         <template #header><b>选择支付方式</b></template>
-        <el-radio-group v-model="method" class="pay-methods">
-          <el-radio value="ALIPAY" border><span class="method">🔵 支付宝</span></el-radio>
-          <el-radio value="WECHAT" border><span class="method">🟢 微信支付</span></el-radio>
-          <el-radio value="CARD" border><span class="method">💳 银行卡</span></el-radio>
-        </el-radio-group>
-        <div class="qr">
-          <div class="qr-box">{{ method === 'ALIPAY' ? '🔵' : method === 'WECHAT' ? '🟢' : '💳' }}</div>
-          <p>请使用{{ methodName }}扫码完成支付（演示环境点击按钮即视为支付成功）</p>
-        </div>
+        <el-empty
+          v-if="!enabledMethods.length" description="平台暂未启用任何支付方式，请联系客服"
+          :image-size="60"
+        />
+        <template v-else>
+          <el-radio-group v-model="method" class="pay-methods">
+            <el-radio v-for="m in enabledMethods" :key="m.code" :value="m.code" border>
+              <span class="method">{{ m.icon }} {{ m.label }}</span>
+            </el-radio>
+          </el-radio-group>
+          <div class="qr">
+            <div class="qr-box">{{ currentMethod?.icon || '💳' }}</div>
+            <p>请使用{{ methodName }}扫码完成支付（演示环境点击按钮即视为支付成功）</p>
+          </div>
+        </template>
       </el-card>
 
       <div class="actions">
         <el-button size="large" @click="$router.push('/user/orders')">稍后支付</el-button>
-        <el-button type="danger" size="large" :loading="paying" @click="doPay">确认支付 ¥{{ totalAmount }}</el-button>
+        <el-button
+          type="danger" size="large" :loading="paying" :disabled="!enabledMethods.length"
+          @click="doPay"
+        >确认支付 ¥{{ totalAmount }}</el-button>
       </div>
     </template>
 
@@ -55,19 +64,32 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createPayment, fetchOrderDetail, payOrder } from '../api/trade'
+import { fetchPublicConfigMap, parseConfigJson } from '../api/config'
 
 const route = useRoute()
+// 售后中/已退款订单同样属于已付款，不能重复支付
+const PAID_STATUSES = ['PAID', 'SHIPPED', 'COMPLETED', 'AFTER_SALE', 'REFUNDED']
+
+const PAY_DEFS = [
+  { code: 'ALIPAY', key: 'alipay', label: '支付宝', icon: '🔵' },
+  { code: 'WECHAT', key: 'wechat', label: '微信支付', icon: '🟢' },
+  { code: 'CARD', key: 'card', label: '银行卡', icon: '💳' }
+]
+
 const orders = ref([])
 const loading = ref(false)
 const paying = ref(false)
 const paid = ref(false)
+const methods = ref(PAY_DEFS.map((m) => ({ ...m, enabled: true })))
 const method = ref('ALIPAY')
 const seconds = ref(15 * 60)
 
 const timer = setInterval(() => seconds.value > 0 && seconds.value--, 1000)
 onUnmounted(() => clearInterval(timer))
 
-const methodName = computed(() => ({ ALIPAY: '支付宝', WECHAT: '微信', CARD: '银行卡' }[method.value]))
+const enabledMethods = computed(() => methods.value.filter((m) => m.enabled))
+const currentMethod = computed(() => methods.value.find((m) => m.code === method.value))
+const methodName = computed(() => currentMethod.value?.label || '支付方式')
 const totalAmount = computed(() => orders.value
   .reduce((n, o) => n + Number(o.payAmount || 0), 0).toFixed(2))
 const countdown = computed(() => {
@@ -76,7 +98,34 @@ const countdown = computed(() => {
   return `${m}:${s}`
 })
 
-onMounted(load)
+onMounted(() => {
+  loadPayConfig()
+  load()
+})
+
+/** 支付方式与待支付超时均由平台配置中心维护 */
+async function loadPayConfig() {
+  try {
+    const map = await fetchPublicConfigMap('pay-method', { silent: true })
+    methods.value = PAY_DEFS.map((def) => {
+      const parsed = parseConfigJson(map[def.key], {})
+      return {
+        ...def,
+        label: parsed?.name || def.label,
+        enabled: parsed?.enabled !== false
+      }
+    })
+    if (!enabledMethods.value.some((m) => m.code === method.value)) {
+      method.value = enabledMethods.value[0]?.code || ''
+    }
+  } catch { /* 保留默认支付方式 */ }
+
+  try {
+    const map = await fetchPublicConfigMap('system', { silent: true })
+    const minutes = Number(map.orderTimeoutMinutes)
+    if (Number.isFinite(minutes) && minutes > 0) seconds.value = Math.round(minutes * 60)
+  } catch { /* ignore */ }
+}
 
 async function load() {
   loading.value = true
@@ -91,7 +140,7 @@ async function load() {
     }
     orders.value = results
     paid.value = results.length > 0 &&
-      results.every((o) => ['PAID', 'SHIPPED', 'COMPLETED'].includes(o.status))
+      results.every((o) => PAID_STATUSES.includes(o.status))
   } finally {
     loading.value = false
   }
@@ -104,10 +153,14 @@ function orderNos() {
 }
 
 async function doPay() {
+  if (!enabledMethods.value.length) {
+    ElMessage.warning('平台暂未启用任何支付方式')
+    return
+  }
   paying.value = true
   try {
     for (const order of orders.value) {
-      if (['PAID', 'SHIPPED', 'COMPLETED'].includes(order.status)) continue
+      if (PAID_STATUSES.includes(order.status)) continue
       const created = await createPayment(order.orderNo, method.value)
       await payOrder(created.data.paymentNo)
     }

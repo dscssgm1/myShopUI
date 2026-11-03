@@ -1,5 +1,10 @@
 import request from './request'
 
+// 店铺列表（关键词/经营类目/最低评分），搜索页「店铺」tab 用
+export function fetchShops(params, config = {}) {
+  return request.get('/shops', { params, ...config })
+}
+
 // 店铺详情
 export function fetchShop(id) {
   return request.get(`/shops/${id}`)

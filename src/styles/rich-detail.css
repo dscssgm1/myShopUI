@@ -1,0 +1,52 @@
+/* 商品详情富文本的统一渲染样式。
+   买家端商品详情页与商家编辑器的实时预览共用这份样式，保证编辑时所见即买家所得。 */
+.rich-detail {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.8;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.rich-detail p {
+  margin: 10px 0;
+}
+.rich-detail img {
+  max-width: 100%;
+  display: block;
+  margin: 10px auto;
+  border-radius: 6px;
+}
+.rich-detail h1 {
+  font-size: 22px;
+  margin: 18px 0 10px;
+}
+.rich-detail h2 {
+  font-size: 18px;
+  margin: 16px 0 8px;
+}
+.rich-detail h3 {
+  font-size: 16px;
+  margin: 14px 0 8px;
+}
+.rich-detail ul,
+.rich-detail ol {
+  padding-left: 22px;
+  margin: 8px 0;
+}
+.rich-detail blockquote {
+  border-left: 3px solid #dcdfe6;
+  background: #fafafa;
+  color: #666;
+  padding: 8px 14px;
+  margin: 10px 0;
+  border-radius: 0 4px 4px 0;
+}
+.rich-detail a {
+  color: #396afc;
+}
+.rich-detail .ql-align-center {
+  text-align: center;
+}
+.rich-detail .ql-align-right {
+  text-align: right;
+}
