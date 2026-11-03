@@ -14,7 +14,8 @@
       <el-table-column label="商品" min-width="260">
         <template #default="{ row }">
           <div class="p-cell">
-            <span class="p-img" :style="{ background: row.productColor }">{{ row.productEmoji }}</span>
+            <img v-if="row.productCoverImage" :src="row.productCoverImage" class="p-photo" alt="" />
+            <span v-else class="p-img" :style="{ background: row.productColor }">{{ row.productEmoji }}</span>
             <span>{{ row.productName }}</span>
           </div>
         </template>
@@ -54,7 +55,8 @@
         <el-table-column label="商品" min-width="240">
           <template #default="{ row }">
             <div class="p-cell">
-              <span class="p-img" :style="{ background: row.color }">{{ row.emoji }}</span>
+              <img v-if="row.coverImage" :src="row.coverImage" class="p-photo" alt="" />
+              <span v-else class="p-img" :style="{ background: row.color }">{{ row.emoji }}</span>
               <span>{{ row.name }}</span>
             </div>
           </template>
@@ -178,6 +180,13 @@ async function remove(row) {
   align-items: center;
   justify-content: center;
   font-size: 20px;
+  flex-shrink: 0;
+}
+.p-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 .points {

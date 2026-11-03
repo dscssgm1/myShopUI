@@ -354,6 +354,7 @@ function buyNow() {
     name: product.value.name,
     emoji: product.value.emoji,
     color: product.value.color,
+    coverImage: product.value.coverImage,
     price: currentSku.value.price,
     skuSpecs: selectedText.value,
     shopName: product.value.shopName

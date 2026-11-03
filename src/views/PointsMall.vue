@@ -13,7 +13,8 @@
 
     <div v-loading="loading" class="mall-grid">
       <div v-for="i in items" :key="i.id" class="mall-item">
-        <div class="m-img" :style="{ background: i.productColor }">{{ i.productEmoji }}</div>
+        <img v-if="i.productCoverImage" :src="i.productCoverImage" class="m-photo" alt="" />
+        <div v-else class="m-img" :style="{ background: i.productColor }">{{ i.productEmoji }}</div>
         <div class="m-name">{{ i.productName }}</div>
         <div class="m-shop">🏪 {{ i.shopName }}</div>
         <div class="m-price">¥{{ i.productPrice }}</div>
@@ -29,7 +30,8 @@
     <!-- 兑换下单：填写收货信息，生成免支付真实订单 -->
     <el-dialog v-model="dialog.visible" title="积分兑换" width="440px">
       <div class="ex-item">
-        <span class="ex-emoji" :style="{ background: dialog.item?.productColor }">{{ dialog.item?.productEmoji }}</span>
+        <img v-if="dialog.item?.productCoverImage" :src="dialog.item.productCoverImage" class="ex-photo" alt="" />
+        <span v-else class="ex-emoji" :style="{ background: dialog.item?.productColor }">{{ dialog.item?.productEmoji }}</span>
         <div class="ex-info">
           <div class="ex-name">{{ dialog.item?.productName }}</div>
           <div class="ex-cost">消耗 <b>{{ dialog.item?.pointsPrice }}</b> 积分</div>
@@ -56,7 +58,8 @@
     <el-drawer v-model="drawer.visible" title="我的兑换记录" size="420px">
       <el-empty v-if="!drawer.list.length" description="还没有兑换记录" />
       <div v-for="e in drawer.list" :key="e.id" class="ex-record">
-        <span class="ex-emoji" :style="{ background: '#f7f8fa' }">{{ e.itemEmoji }}</span>
+        <img v-if="e.itemCover" :src="e.itemCover" class="ex-photo" alt="" />
+        <span v-else class="ex-emoji" :style="{ background: '#f7f8fa' }">{{ e.itemEmoji }}</span>
         <div class="ex-info">
           <div class="ex-name">{{ e.itemName }}</div>
           <div class="ex-meta">
@@ -217,6 +220,13 @@ function loadDrawer() {
   justify-content: center;
   font-size: 48px;
 }
+.m-photo {
+  height: 120px;
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}
 .m-name {
   font-size: 13px;
   height: 36px;
@@ -259,6 +269,13 @@ function loadDrawer() {
   align-items: center;
   justify-content: center;
   font-size: 28px;
+  flex-shrink: 0;
+}
+.ex-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 .ex-name {

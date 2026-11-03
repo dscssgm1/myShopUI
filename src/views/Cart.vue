@@ -22,7 +22,8 @@
 
         <div v-for="row in group.items" :key="row.id" class="item-row">
           <el-checkbox v-model="selected" :value="row.id" />
-          <div class="g-img" :style="{ background: row.color }" @click="$router.push(`/product/${row.productId}`)">
+          <img v-if="row.coverImage" :src="row.coverImage" class="g-photo" alt="" @click="$router.push(`/product/${row.productId}`)" />
+          <div v-else class="g-img" :style="{ background: row.color }" @click="$router.push(`/product/${row.productId}`)">
             {{ row.emoji }}
           </div>
           <div class="g-info">
@@ -136,6 +137,7 @@ function checkout() {
     name: i.productName,
     emoji: i.emoji,
     color: i.color,
+    coverImage: i.coverImage,
     price: i.price,
     skuSpecs: i.skuSpecs,
     shopName: i.shopName
@@ -201,6 +203,14 @@ h3 {
   align-items: center;
   justify-content: center;
   font-size: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.g-photo {
+  width: 62px;
+  height: 62px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
   cursor: pointer;
 }

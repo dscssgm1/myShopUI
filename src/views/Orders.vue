@@ -31,7 +31,8 @@
         <div class="o-body">
           <div class="items">
             <div v-for="item in o.items" :key="`${item.productId}-${item.skuId}`" class="item">
-              <div class="g-img" :style="{ background: item.productColor }">{{ item.productEmoji }}</div>
+              <img v-if="item.productCoverImage" :src="item.productCoverImage" class="g-photo" alt="" />
+              <div v-else class="g-img" :style="{ background: item.productColor }">{{ item.productEmoji }}</div>
               <div class="g-info">
                 <div class="g-name">{{ item.productName }}</div>
                 <div v-if="item.skuSpecs" class="g-sku">{{ item.skuSpecs }}</div>
@@ -469,6 +470,13 @@ h3 {
   align-items: center;
   justify-content: center;
   font-size: 24px;
+  flex-shrink: 0;
+}
+.g-photo {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 .g-name {

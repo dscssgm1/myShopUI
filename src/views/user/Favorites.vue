@@ -7,7 +7,8 @@
       </el-empty>
       <div v-else class="fav-grid">
         <div v-for="p in items" :key="p.id" class="fav-item" @click="$router.push(`/product/${p.id}`)">
-          <div class="f-img" :style="{ background: p.color }">{{ p.emoji }}</div>
+          <img v-if="p.coverImage" :src="p.coverImage" class="f-photo" alt="" />
+          <div v-else class="f-img" :style="{ background: p.color }">{{ p.emoji }}</div>
           <div class="f-name">{{ p.name }}</div>
           <div class="f-foot">
             <span class="f-price">¥{{ p.price }}</span>
@@ -91,6 +92,12 @@ h3 {
   align-items: center;
   justify-content: center;
   font-size: 56px;
+}
+.f-photo {
+  height: 140px;
+  width: 100%;
+  object-fit: cover;
+  display: block;
 }
 .f-name {
   font-size: 13px;

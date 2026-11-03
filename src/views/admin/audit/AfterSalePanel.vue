@@ -172,7 +172,8 @@
         <div v-if="detail.items?.length" class="section">
           <div class="section-title">售后商品</div>
           <div v-for="it in detail.items" :key="`${it.productId}-${it.skuId}`" class="item">
-            <div class="g-img" :style="{ background: it.productColor }">{{ it.productEmoji }}</div>
+            <img v-if="it.productCoverImage" :src="it.productCoverImage" class="g-photo" alt="" />
+            <div v-else class="g-img" :style="{ background: it.productColor }">{{ it.productEmoji }}</div>
             <div>
               <div class="g-name">{{ it.productName }}</div>
               <div v-if="it.skuSpecs" class="g-sku">{{ it.skuSpecs }}</div>
@@ -458,6 +459,13 @@ function tagType(s) {
   align-items: center;
   justify-content: center;
   font-size: 22px;
+  flex-shrink: 0;
+}
+.g-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 .g-name {

@@ -33,7 +33,8 @@
           <span class="shop-amount">小计 ¥{{ shop.payAmount }}</span>
         </div>
         <div v-for="item in shop.items" :key="`${item.productId}-${item.skuId}`" class="item-row">
-          <div class="g-img" :style="{ background: item.productColor }">{{ item.productEmoji }}</div>
+          <img v-if="item.productCoverImage" :src="item.productCoverImage" class="g-photo" alt="" />
+          <div v-else class="g-img" :style="{ background: item.productColor }">{{ item.productEmoji }}</div>
           <div class="item-mid">
             <div class="item-name">{{ item.productName }}</div>
             <div v-if="item.skuSpecs" class="item-sku">{{ item.skuSpecs }}</div>
@@ -289,6 +290,13 @@ h3 {
   align-items: center;
   justify-content: center;
   font-size: 26px;
+  flex-shrink: 0;
+}
+.g-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 .item-mid {

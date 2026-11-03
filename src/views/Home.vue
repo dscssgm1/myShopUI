@@ -3,16 +3,17 @@
     <!-- 首屏：左侧大分类菜单（悬停向右展开小类）+ 右侧 Banner 与分类宫格 -->
     <div class="hero" @mouseleave="hoverIndex = -1">
       <aside class="cat-menu">
-        <div
+        <!-- 真实链接 + target=_blank：点击分类在新标签页打开商品列表 -->
+        <a
           v-for="(c, i) in categories" :key="c.id"
           class="cat-row" :class="{ active: hoverIndex === i }"
+          :href="`/products?categoryId=${c.id}`" target="_blank"
           @mouseenter="hoverIndex = i"
-          @click="$router.push({ path: '/products', query: { categoryId: c.id } })"
         >
           <span class="cat-row-icon">{{ c.icon || '📦' }}</span>
           <span class="cat-row-name">{{ c.name }}</span>
           <span class="cat-arrow">›</span>
-        </div>
+        </a>
       </aside>
 
       <!-- 悬停展开的小类面板：从悬停行的高度向右展开 -->
@@ -20,16 +21,16 @@
         <div v-if="hoverIndex >= 0 && categories[hoverIndex]" class="cat-flyout" :style="{ top: flyoutTop }">
           <div class="fly-head">{{ categories[hoverIndex].icon }} {{ categories[hoverIndex].name }}</div>
           <div class="fly-chips">
-            <router-link
+            <a
               v-for="s in categories[hoverIndex].children || []" :key="s.id"
-              class="fly-chip"
-              :to="{ path: '/products', query: { categoryId: categories[hoverIndex].id, subCategoryId: s.id } }"
-            >{{ s.name }}</router-link>
+              class="fly-chip" target="_blank"
+              :href="`/products?categoryId=${categories[hoverIndex].id}&subCategoryId=${s.id}`"
+            >{{ s.name }}</a>
             <span v-if="!(categories[hoverIndex].children || []).length" class="fly-empty">该分类下暂无小类</span>
           </div>
-          <router-link class="fly-all" :to="{ path: '/products', query: { categoryId: categories[hoverIndex].id } }">
+          <a class="fly-all" target="_blank" :href="`/products?categoryId=${categories[hoverIndex].id}`">
             查看 {{ categories[hoverIndex].name }} 全部商品 →
-          </router-link>
+          </a>
         </div>
       </transition>
 
@@ -229,6 +230,7 @@ async function loadBanners() {
   padding: 0 14px 0 18px;
   font-size: 14px;
   color: #333;
+  text-decoration: none;
   cursor: pointer;
 }
 .cat-row.active {

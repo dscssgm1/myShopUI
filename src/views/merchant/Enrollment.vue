@@ -70,7 +70,13 @@
       >
         <el-table-column type="selection" width="46" />
         <el-table-column prop="name" label="商品" min-width="200">
-          <template #default="{ row }">{{ row.emoji }} {{ row.name }}</template>
+          <template #default="{ row }">
+            <div class="p-cell">
+              <img v-if="row.coverImage" :src="row.coverImage" class="p-photo" alt="" />
+              <span v-else class="p-emoji">{{ row.emoji }}</span>
+              <span>{{ row.name }}</span>
+            </div>
+          </template>
         </el-table-column>
         <el-table-column label="价格" width="110">
           <template #default="{ row }">¥{{ row.price }}</template>
@@ -195,6 +201,30 @@ async function submitApply() {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+/* 报名弹窗里的商品行：主图 + 名称（无图商品回退 emoji 占位） */
+.p-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.p-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.p-emoji {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #f7f8fa;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
 }
 .head .tip {
   flex: 1;

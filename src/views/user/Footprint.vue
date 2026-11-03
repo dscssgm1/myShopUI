@@ -8,7 +8,8 @@
       <el-empty v-if="!loading && !items.length" description="暂无浏览记录" />
       <div v-else class="fp-list">
         <div v-for="f in items" :key="f.productId" class="fp-item" @click="$router.push(`/product/${f.productId}`)">
-          <div class="f-img" :style="{ background: f.product?.color }">{{ f.product?.emoji || '🛍️' }}</div>
+          <img v-if="f.product?.coverImage" :src="f.product.coverImage" class="f-photo" alt="" />
+          <div v-else class="f-img" :style="{ background: f.product?.color }">{{ f.product?.emoji || '🛍️' }}</div>
           <div class="f-mid">
             <div class="f-name">{{ f.product?.name || '商品已下架' }}</div>
             <div class="f-time">🕐 {{ formatTime(f.viewedAt) }}</div>
@@ -104,6 +105,13 @@ h3 {
   align-items: center;
   justify-content: center;
   font-size: 30px;
+  flex-shrink: 0;
+}
+.f-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 .f-mid {
