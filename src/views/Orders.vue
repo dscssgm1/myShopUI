@@ -21,6 +21,7 @@
           <span class="time">{{ o.createdAt }}</span>
           <span class="no">订单号：{{ o.orderNo }}</span>
           <span class="shop">🏪 {{ o.shopName }}</span>
+          <el-tag v-if="o.groupNo" size="small" type="danger">跨店合单</el-tag>
           <el-tag v-if="o.bizType === 'RECOVERY'" size="small" type="warning">补款订单</el-tag>
           <el-tag v-if="o.bizType === 'POINTS'" size="small" type="danger">积分兑换</el-tag>
           <span v-if="o.sourceOrderNo" class="source">原订单：{{ o.sourceOrderNo }}</span>
@@ -45,7 +46,7 @@
           </div>
           <div class="actions">
             <template v-if="o.status === 'UNPAID'">
-              <el-button type="danger" size="small" @click="$router.push(`/pay/${o.orderNo}`)">去支付</el-button>
+              <el-button type="danger" size="small" @click="goPay(o)">去支付</el-button>
               <el-button v-if="o.bizType !== 'RECOVERY'" size="small" @click="cancel(o)">取消订单</el-button>
             </template>
             <template v-if="o.status === 'PAID'">
@@ -176,7 +177,7 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { cancelOrder, confirmShopOrder, fetchOrders } from '../api/trade'
+import { cancelOrder, cancelOrderGroup, confirmShopOrder, fetchOrders } from '../api/trade'
 import { createReview, fetchReviewable } from '../api/review'
 import { createAfterSale } from '../api/afterSale'
 import { fetchShipmentByOrder } from '../api/logistics'
@@ -226,14 +227,42 @@ function confirm(order) {
   })
 }
 
+/** 合单子订单走组收银台整组一次付清；普通订单按单支付 */
+function goPay(order) {
+  if (order.groupNo) {
+    router.push({ path: '/pay', query: { group: order.groupNo } })
+  } else {
+    router.push(`/pay/${order.orderNo}`)
+  }
+}
+
 function cancel(order) {
   const paid = order.status === 'PAID'
+  if (order.groupNo) {
+    cancelGroupOrder(order, paid)
+    return
+  }
   ElMessageBox.confirm(
     paid ? '商家尚未发货，取消后将原路退款，确定取消该订单吗？' : '确定取消该订单吗？',
     '提示', { type: 'warning' }
   ).then(async () => {
     await cancelOrder(order.orderNo)
     ElMessage.success(paid ? '订单已取消，退款将原路退回' : '订单已取消')
+    load()
+  })
+}
+
+/**
+ * 跨店合单取消：全部未付 → 整组取消并退回优惠券；
+ * 部分已付 → 只取消未付子单，优惠券不退回；已付子单按分摊金额原路退款。
+ */
+function cancelGroupOrder(order, paid) {
+  const text = paid
+    ? '商家尚未发货，取消后将按该子单分摊的实付金额原路退款；合单内其他订单仍在使用优惠券，券暂不退回。确定取消该订单吗？'
+    : '该订单属于跨店合单：若整组均未支付，将取消合单内全部子订单并退回优惠券；若部分已支付，则只取消未支付的子单（券不退回）。确定取消吗？'
+  ElMessageBox.confirm(text, '跨店合单取消', { type: 'warning' }).then(async () => {
+    await cancelOrderGroup(order.groupNo)
+    ElMessage.success('取消成功')
     load()
   })
 }

@@ -50,8 +50,8 @@
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="viewApply(row)">资料</el-button>
           <template v-if="row.status === 'PENDING'">
-            <el-button link type="success" size="small" @click="approve(row)">通过</el-button>
-            <el-button link type="danger" size="small" @click="reject(row)">驳回</el-button>
+            <el-button v-perm="'admin:audit:shopApply'" link type="success" size="small" @click="approve(row)">通过</el-button>
+            <el-button v-perm="'admin:audit:shopApply'" link type="danger" size="small" @click="reject(row)">驳回</el-button>
           </template>
         </template>
       </el-table-column>
@@ -106,8 +106,8 @@
       <template #footer>
         <el-button @click="applyDialog = false">关闭</el-button>
         <template v-if="currentApply?.status === 'PENDING'">
-          <el-button type="danger" @click="reject(currentApply)">驳回</el-button>
-          <el-button type="success" @click="approve(currentApply)">审核通过</el-button>
+          <el-button v-perm="'admin:audit:shopApply'" type="danger" @click="reject(currentApply)">驳回</el-button>
+          <el-button v-perm="'admin:audit:shopApply'" type="success" @click="approve(currentApply)">审核通过</el-button>
         </template>
       </template>
     </el-dialog>

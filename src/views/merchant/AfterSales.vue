@@ -49,14 +49,17 @@
           <el-button link type="primary" size="small" @click="openDetail(row.afterSaleNo)">详情</el-button>
           <el-button
             v-if="row.status === 'PENDING_MERCHANT'"
+            v-perm="'merchant:after-sales:review'"
             link type="warning" size="small" @click="openReview(row)"
           >审核</el-button>
           <el-button
             v-if="row.status === 'APPROVED'"
+            v-perm="'merchant:after-sales:refund'"
             link type="danger" size="small" @click="refund(row)"
           >退款</el-button>
           <el-button
             v-if="row.status === 'REFUNDED' && row.type === 'RETURN_REFUND'"
+            v-perm="'merchant:after-sales:appeal'"
             link type="danger" size="small" @click="openAppeal(row)"
           >申诉</el-button>
         </template>
@@ -200,14 +203,17 @@
         <div class="drawer-actions">
           <el-button
             v-if="detail.status === 'PENDING_MERCHANT'"
+            v-perm="'merchant:after-sales:review'"
             type="primary" @click="openReview(detail)"
           >审核</el-button>
           <el-button
             v-if="detail.status === 'APPROVED'"
+            v-perm="'merchant:after-sales:refund'"
             type="danger" @click="refund(detail)"
           >触发退款</el-button>
           <el-button
             v-if="detail.status === 'REFUNDED' && detail.type === 'RETURN_REFUND'"
+            v-perm="'merchant:after-sales:appeal'"
             type="danger" plain @click="openAppeal(detail)"
           >申诉</el-button>
         </div>

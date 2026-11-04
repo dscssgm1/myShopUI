@@ -69,8 +69,15 @@ const router = createRouter({
         { path: 'audit', name: 'admin-audit', component: () => import('../views/admin/Audit.vue') },
         { path: 'reviews', redirect: { path: '/admin/audit', query: { tab: 'review' } } },
         { path: 'config', name: 'admin-config', component: () => import('../views/admin/Config.vue') },
-        { path: 'points-goods', name: 'admin-points-goods', component: () => import('../views/admin/PointsGoods.vue') },
         { path: 'logs', name: 'admin-logs', component: () => import('../views/admin/Logs.vue') },
+        {
+          path: 'roles', name: 'admin-roles',
+          component: () => import('../views/sys/RolesManage.vue'), props: { group: 'PLATFORM' }
+        },
+        {
+          path: 'employees', name: 'admin-employees',
+          component: () => import('../views/sys/StaffManage.vue'), props: { group: 'PLATFORM' }
+        },
         {
           path: 'cs', name: 'admin-cs',
           component: () => import('../components/CsWorkbench.vue'),
@@ -93,6 +100,14 @@ const router = createRouter({
         { path: 'enrollment', name: 'merchant-enrollment', component: () => import('../views/merchant/Enrollment.vue') },
         { path: 'after-sales', name: 'merchant-after-sales', component: () => import('../views/merchant/AfterSales.vue') },
         { path: 'reviews', name: 'merchant-reviews', component: () => import('../views/merchant/Reviews.vue') },
+        {
+          path: 'roles', name: 'merchant-roles',
+          component: () => import('../views/sys/RolesManage.vue'), props: { group: 'MERCHANT' }
+        },
+        {
+          path: 'staff', name: 'merchant-staff',
+          component: () => import('../views/sys/StaffManage.vue'), props: { group: 'MERCHANT' }
+        },
         { path: 'cs', name: 'merchant-cs', component: () => import('../components/CsWorkbench.vue') }
       ]
     },

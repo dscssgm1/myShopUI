@@ -42,12 +42,6 @@
         <el-menu-item index="/user/bankcards">
           <el-icon><CreditCard /></el-icon>银行卡管理
         </el-menu-item>
-        <el-menu-item index="/user/logistics-apply">
-          <el-icon><Van /></el-icon>物流入驻
-        </el-menu-item>
-        <el-menu-item index="/user/merchant-apply">
-          <el-icon><Shop /></el-icon>商家入驻
-        </el-menu-item>
         <el-menu-item index="/user/more">
           <el-icon><MenuIcon /></el-icon>更多功能
         </el-menu-item>
@@ -66,7 +60,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ChatDotRound, ChatDotSquare, Clock, CreditCard, Location, Lock,
-  Menu as MenuIcon, Postcard, RefreshLeft, Shop, Star, Tickets, User, Van
+  Menu as MenuIcon, Postcard, RefreshLeft, Star, Tickets, User
 } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 import { fetchMemberProfile } from '../api/user'

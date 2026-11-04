@@ -4,7 +4,7 @@
       <div class="head">
         <b>平台优惠券</b>
         <span class="tip">平台券优惠全额由平台承担；商家券在商家端「店铺营销」发放</span>
-        <el-button type="primary" size="small" @click="openAdd">+ 发放优惠券</el-button>
+        <el-button v-perm="'admin:coupons:create'" type="primary" size="small" @click="openAdd">+ 发放优惠券</el-button>
       </div>
     </template>
 
@@ -27,6 +27,12 @@
       <el-table-column label="每人限领" width="90">
         <template #default="{ row }">{{ row.perUserLimit }} 张</template>
       </el-table-column>
+      <el-table-column label="积分价" width="90">
+        <template #default="{ row }">
+          <span v-if="Number(row.pointsPrice) > 0" class="points">{{ row.pointsPrice }} 积分</span>
+          <span v-else class="sub">免费领取</span>
+        </template>
+      </el-table-column>
       <el-table-column label="叠加规则" width="150">
         <template #default="{ row }">
           <template v-if="row.couponStackable === false || row.stackable === false">
@@ -48,7 +54,7 @@
       </el-table-column>
       <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">
-          <el-button v-if="row.status === 'ACTIVE' && row.shopId === 0" link type="danger" size="small" @click="end(row)">
+          <el-button v-if="row.status === 'ACTIVE' && row.shopId === 0" v-perm="'admin:coupons:end'" link type="danger" size="small" @click="end(row)">
             下架
           </el-button>
           <span v-else class="sub">—</span>
@@ -71,17 +77,23 @@
           <el-radio-group v-model="form.scopeType">
             <el-radio-button value="ALL">全品类</el-radio-button>
             <el-radio-button value="CATEGORY">指定分类</el-radio-button>
-            <el-radio-button value="PRODUCT">指定商品</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="form.scopeType !== 'ALL'" label="范围 ID">
-          <el-input v-model="form.scopeIdsText" placeholder="多个 ID 用英文逗号分隔，如：1,2,3" />
+        <el-form-item v-if="form.scopeType === 'CATEGORY'" label="选择分类">
+          <el-select v-model="form.scopeIds" multiple filterable placeholder="选择适用分类（大类）" style="width: 100%">
+            <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
         </el-form-item>
         <el-form-item label="发放总量" required>
           <el-input-number v-model="form.totalStock" :min="1" /> 张
         </el-form-item>
         <el-form-item label="每人限领" required>
           <el-input-number v-model="form.perUserLimit" :min="1" /> 张
+        </el-form-item>
+        <el-form-item label="积分价">
+          <el-input-number v-model="form.pointsPrice" :min="0" :step="100" />
+          积分
+          <div class="tip-block">填 0 为免费领取的普通券；大于 0 则不上领券中心，只在积分商城用积分兑换</div>
         </el-form-item>
         <el-form-item label="与活动同用">
           <el-switch v-model="form.couponStackable" />
@@ -110,25 +122,29 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { createCouponTemplate, endCouponTemplate, fetchAdminCouponTemplates } from '../../api/admin'
+import { categoryNames, loadTopCategories } from '../../utils/categoryOptions'
 
 const rows = ref([])
 const loading = ref(false)
 const dialog = ref(false)
+const categoryOptions = ref([])
 const form = reactive({
   title: '', thresholdAmount: 0, discountAmount: 10,
-  scopeType: 'ALL', scopeIdsText: '',
-  totalStock: 100, perUserLimit: 1, couponStackable: true, stackable: true,
+  scopeType: 'ALL', scopeIds: [],
+  totalStock: 100, perUserLimit: 1, pointsPrice: 0, couponStackable: true, stackable: true,
   validStart: '', validEnd: ''
 })
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadTopCategories().then((list) => (categoryOptions.value = list))
+})
 
 const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(5, 16) : '不限')
 
 function scopeText(row) {
-  const label = { ALL: '全品类', CATEGORY: '指定分类', PRODUCT: '指定商品', SHOP: '本店商品' }[row.scopeType] || row.scopeType
-  return row.scopeType === 'ALL' || row.scopeType === 'SHOP' ? label
-    : `${label} #${(row.scopeIds || []).join(', #')}`
+  if (row.scopeType === 'CATEGORY') return `指定分类：${categoryNames(row.scopeIds, categoryOptions.value).join('、')}`
+  return { ALL: '全品类', SHOP: '本店商品', PRODUCT: '指定商品' }[row.scopeType] || row.scopeType
 }
 
 async function load() {
@@ -142,8 +158,8 @@ async function load() {
 function openAdd() {
   Object.assign(form, {
     title: '', thresholdAmount: 0, discountAmount: 10,
-    scopeType: 'ALL', scopeIdsText: '',
-    totalStock: 100, perUserLimit: 1, couponStackable: true, stackable: true,
+    scopeType: 'ALL', scopeIds: [],
+    totalStock: 100, perUserLimit: 1, pointsPrice: 0, couponStackable: true, stackable: true,
     validStart: '', validEnd: ''
   })
   dialog.value = true
@@ -154,16 +170,19 @@ async function save() {
     ElMessage.warning('请填写券名称')
     return
   }
+  if (form.scopeType === 'CATEGORY' && !form.scopeIds.length) {
+    ElMessage.warning('请选择适用分类')
+    return
+  }
   await createCouponTemplate({
     title: form.title,
     thresholdAmount: form.thresholdAmount,
     discountAmount: form.discountAmount,
     scopeType: form.scopeType,
-    scopeIds: form.scopeIdsText
-      ? form.scopeIdsText.split(',').map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0)
-      : [],
+    scopeIds: form.scopeType === 'CATEGORY' ? form.scopeIds : [],
     totalStock: form.totalStock,
     perUserLimit: form.perUserLimit,
+    pointsPrice: form.pointsPrice > 0 ? form.pointsPrice : null,
     couponStackable: form.couponStackable,
     stackable: form.stackable,
     validStart: form.validStart || null,
@@ -205,6 +224,15 @@ function end(row) {
   margin-left: 10px;
   font-size: 12px;
   color: #999;
+}
+.tip-block {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+.points {
+  color: #ff4b2b;
+  font-weight: 600;
 }
 .mr6 {
   margin-right: 6px;

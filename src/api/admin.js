@@ -143,25 +143,6 @@ export function offSaleProduct(id, reason) {
   return request.put(`/products/${id}/off-sale`, null, { params: { reason } })
 }
 
-// ==================== 积分商城 ====================
-
-export function fetchPointsMallAdminItems() {
-  return request.get('/system/points-mall/admin/items')
-}
-
-/** 上架积分商品：{ productId }，价格按上架时快照 */
-export function createPointsMallItem(productId) {
-  return request.post('/system/points-mall/admin/items', { productId })
-}
-
-export function setPointsMallItemStatus(id, status) {
-  return request.put(`/system/points-mall/admin/items/${id}/status`, null, { params: { status } })
-}
-
-export function deletePointsMallItem(id) {
-  return request.delete(`/system/points-mall/admin/items/${id}`)
-}
-
 // ==================== 分类管理 ====================
 
 export function createCategory(data) {

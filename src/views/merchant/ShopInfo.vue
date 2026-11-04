@@ -89,7 +89,7 @@
       </el-form-item>
 
       <el-form-item>
-        <el-button type="primary" :loading="saving" @click="save">保存修改</el-button>
+        <el-button v-perm="'merchant:shop:edit'" type="primary" :loading="saving" @click="save">保存修改</el-button>
         <el-button @click="load">重置</el-button>
       </el-form-item>
     </el-form>

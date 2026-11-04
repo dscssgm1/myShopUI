@@ -38,10 +38,10 @@
       <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'PENDING' || (row.reported && row.status === 'VISIBLE')">
-            <el-button link type="primary" size="small" @click="approve(row)">通过</el-button>
-            <el-button link type="danger" size="small" @click="hide(row)">隐藏</el-button>
+            <el-button v-perm="'admin:audit:review'" link type="primary" size="small" @click="approve(row)">通过</el-button>
+            <el-button v-perm="'admin:audit:review'" link type="danger" size="small" @click="hide(row)">隐藏</el-button>
           </template>
-          <el-button v-else-if="row.status === 'HIDDEN'" link type="primary" size="small" @click="approve(row)">
+          <el-button v-else-if="row.status === 'HIDDEN'" v-perm="'admin:audit:review'" link type="primary" size="small" @click="approve(row)">
             恢复展示
           </el-button>
           <span v-else class="muted">已展示</span>

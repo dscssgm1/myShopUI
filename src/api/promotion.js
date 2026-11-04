@@ -33,6 +33,8 @@ function matchPromotion(promotion, product) {
   const scopeIds = (promotion.scopeIds || []).map(Number)
   switch (promotion.scopeType) {
     case 'CATEGORY':
+      // 商家活动的分类范围只作用于本店商品
+      if (Number(promotion.shopId) > 0 && Number(promotion.shopId) !== Number(product.shopId)) return false
       return scopeIds.includes(Number(product.categoryId))
     case 'PRODUCT':
       return scopeIds.includes(Number(product.id))
@@ -102,6 +104,25 @@ export function fetchAvailableCoupons(items) {
   return request.post('/discounts/available-coupons', { items })
 }
 
+/** 结算页「本单可领」：按当前商品明细过滤可领券，每张带本单可抵扣金额 */
+export function fetchClaimableCoupons(items) {
+  return request.post('/coupons/claimable', { items })
+}
+
+/** 领取优惠券模板 */
+export function claimCoupon(templateId) {
+  return request.post(`/coupons/${templateId}/claim`)
+}
+
+/**
+ * 商品展示最低到手价：按单件口径算价（活动 + 登录用户满足门槛的券）。
+ * items = [{ productId, categoryId, shopId, price, quantity: 1 }]；
+ * 公开接口，游客只返回活动价。后台批量刷新，失败时静默。
+ */
+export function fetchProductPrices(items) {
+  return request.post('/discounts/product-prices', { items }, { silent: true })
+}
+
 // ==================== 商家优惠券 ====================
 
 /** 商家自己发放的券（含已结束） */
@@ -109,7 +130,7 @@ export function fetchMerchantCouponTemplates() {
   return request.get('/coupons/templates/mine')
 }
 
-/** 商家发券：范围限本店商品（SHOP / PRODUCT） */
+/** 商家发券：范围限本店商品（SHOP / CATEGORY） */
 export function createMerchantCouponTemplate(data) {
   return request.post('/coupons/templates', data)
 }

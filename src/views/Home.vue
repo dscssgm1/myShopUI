@@ -98,6 +98,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import ProductCard from '../components/ProductCard.vue'
 import { fetchBrands, fetchCategoryTree, fetchProducts } from '../api/product'
 import { fetchPublicConfig, parseConfigJson } from '../api/config'
+import { attachProductPrices } from '../utils/productPrice'
 
 const DEFAULT_BANNERS = [
   { id: 1, title: '双 11 全球狂欢节', subtitle: '每满 300 减 50 · 上不封顶', color: 'linear-gradient(90deg,#ff416c,#ff4b2b)', link: '/products' },
@@ -142,7 +143,10 @@ onMounted(async () => {
 
   // 热卖榜单与品牌墙：非阻塞加载，失败时板块留空不影响首屏
   fetchProducts({ page: 1, size: 10, sort: 'sales' })
-    .then((res) => (hotProducts.value = (res.data?.list || []).slice(0, 10)))
+    .then((res) => {
+      hotProducts.value = (res.data?.list || []).slice(0, 10)
+      attachProductPrices(hotProducts.value)
+    })
     .catch(() => {})
   fetchBrands()
     .then((res) => (brands.value = res.data || []))
@@ -174,6 +178,8 @@ async function loadMore() {
     const list = res.data?.list || []
     products.value.push(...list)
     seenIds.value.push(...list.map((p) => p.id))
+    // 异步补齐单件最低到手价（活动 + 券），不阻塞继续下滑加载
+    attachProductPrices(list)
     // 返回不足一批说明后端已经取完，停住不再请求
     if (list.length < BATCH_SIZE) exhausted.value = true
   } catch { /* 保留已加载内容 */ } finally {

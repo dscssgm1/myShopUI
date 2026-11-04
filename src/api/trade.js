@@ -44,6 +44,16 @@ export function cancelOrder(orderNo) {
   return request.post(`/orders/${orderNo}/cancel`)
 }
 
+// ==================== 跨店合单订单组（父订单） ====================
+
+export function fetchOrderGroup(groupNo) {
+  return request.get(`/orders/groups/${groupNo}`)
+}
+
+export function cancelOrderGroup(groupNo) {
+  return request.post(`/orders/groups/${groupNo}/cancel`)
+}
+
 export function confirmShopOrder(orderNo) {
   return request.post(`/orders/${orderNo}/confirm`)
 }
@@ -62,6 +72,11 @@ export function fetchMyCommissionRecords(params) {
 
 export function createPayment(orderNo, channel) {
   return request.post('/payments', { orderNo, channel })
+}
+
+/** 跨店合单整组一次付清 */
+export function createGroupPayment(groupNo, channel) {
+  return request.post('/payments', { groupNo, channel })
 }
 
 export function payOrder(paymentNo) {

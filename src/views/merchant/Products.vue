@@ -19,7 +19,7 @@
             <el-option label="已上架" :value="1" />
             <el-option label="已下架" :value="0" />
           </el-select>
-          <el-button type="primary" size="small" @click="openCreate">+ 发布商品</el-button>
+          <el-button v-perm="'merchant:products:create'" type="primary" size="small" @click="openCreate">+ 发布商品</el-button>
         </div>
       </div>
     </template>
@@ -69,12 +69,12 @@
         </el-table-column>
         <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="primary" size="small" @click="openRestock(row)">补货</el-button>
-            <el-button link type="primary" size="small" @click="openPrice(row)">售价</el-button>
-            <el-button v-if="row.status === 1" link type="info" size="small" @click="doOffSale(row)">下架</el-button>
-            <el-button v-else link type="success" size="small" @click="doOnSale(row)">上架</el-button>
-            <el-button link type="danger" size="small" @click="doDelete(row)">删除</el-button>
+            <el-button v-perm="'merchant:products:edit'" link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button v-perm="'merchant:products:edit'" link type="primary" size="small" @click="openRestock(row)">补货</el-button>
+            <el-button v-perm="'merchant:products:price'" link type="primary" size="small" @click="openPrice(row)">售价</el-button>
+            <el-button v-if="row.status === 1" v-perm="'merchant:products:status'" link type="info" size="small" @click="doOffSale(row)">下架</el-button>
+            <el-button v-else v-perm="'merchant:products:status'" link type="success" size="small" @click="doOnSale(row)">上架</el-button>
+            <el-button v-perm="'merchant:products:delete'" link type="danger" size="small" @click="doDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

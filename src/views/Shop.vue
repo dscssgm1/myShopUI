@@ -17,6 +17,9 @@
       </div>
     </div>
 
+    <!-- 店铺在发优惠券：可直接领取，领取后刷新本店商品的最低到手价 -->
+    <ShopCoupons :shop-id="shop.id" @claimed="refreshGoodsPrices" />
+
     <!-- 资质公示：所有用户可见 -->
     <div v-if="shop.licenseNo" class="license-section">
       <div class="license-title">资质信息</div>
@@ -59,7 +62,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
+import ShopCoupons from '../components/ShopCoupons.vue'
 import { fetchShop, fetchShopProducts } from '../api/shop'
+import { attachProductPrices } from '../utils/productPrice'
 
 const route = useRoute()
 const shop = ref(null)
@@ -85,11 +90,18 @@ async function load() {
   } catch { shop.value = null } finally { loading.value = false }
 }
 
+/** 领到新券后原地刷新商品价格（不重新拉商品列表） */
+function refreshGoodsPrices() {
+  attachProductPrices(goods.value)
+}
+
 async function loadGoods() {
   try {
     const res = await fetchShopProducts(route.params.id, page.value, size)
     goods.value = res.data?.list || []
     total.value = res.data?.total || 0
+    // 本店商品同样展示单件最低到手价（失败静默，按原价展示）
+    await attachProductPrices(goods.value)
   } catch { goods.value = []; total.value = 0 }
 }
 </script>

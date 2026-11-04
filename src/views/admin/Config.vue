@@ -9,10 +9,10 @@
 
     <el-tabs v-model="tab" @tab-change="onTabChange">
       <!-- ==================== 规格模板 ==================== -->
-      <el-tab-pane label="规格模板" name="specs">
+      <el-tab-pane v-if="userStore.hasPerm('admin:config:spec')" label="规格模板" name="specs">
         <div class="pane-head">
           <span class="tip">商家发布商品时可直接选用这些规格模板。</span>
-          <el-button type="primary" @click="openSpec()">新增规格</el-button>
+          <el-button v-perm="'admin:config:spec'" type="primary" @click="openSpec()">新增规格</el-button>
         </div>
         <el-table :data="specs" size="small">
           <el-table-column prop="name" label="规格名称" width="160" />
@@ -24,8 +24,8 @@
           <el-table-column prop="sort" label="排序" width="80" />
           <el-table-column label="操作" width="130">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openSpec(row)">编辑</el-button>
-              <el-button link type="danger" @click="removeSpec(row)">删除</el-button>
+              <el-button v-perm="'admin:config:spec'" link type="primary" @click="openSpec(row)">编辑</el-button>
+              <el-button v-perm="'admin:config:spec'" link type="danger" @click="removeSpec(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -52,7 +52,7 @@
           </el-table-column>
         </el-table>
         <div class="foot">
-          <el-button type="primary" :loading="saving" @click="savePay">保存支付方式</el-button>
+          <el-button v-perm="'admin:config:save'" type="primary" :loading="saving" @click="savePay">保存支付方式</el-button>
         </div>
       </el-tab-pane>
 
@@ -93,15 +93,15 @@
           </el-table-column>
         </el-table>
         <div class="foot">
-          <el-button type="primary" :loading="saving" @click="saveGuarantee">保存服务保障</el-button>
+          <el-button v-perm="'admin:config:save'" type="primary" :loading="saving" @click="saveGuarantee">保存服务保障</el-button>
         </div>
       </el-tab-pane>
 
       <!-- ==================== 会员等级 ==================== -->
-      <el-tab-pane label="会员等级" name="levels">
+      <el-tab-pane v-if="userStore.hasPerm('admin:config:member')" label="会员等级" name="levels">
         <div class="pane-head">
           <span class="tip">成长值达到门槛自动升级；积分倍率影响下单获得积分，折扣值 10 表示无折扣。</span>
-          <el-button type="primary" @click="openLevel()">新增等级</el-button>
+          <el-button v-perm="'admin:config:member'" type="primary" @click="openLevel()">新增等级</el-button>
         </div>
         <el-table :data="levels" size="small">
           <el-table-column prop="name" label="等级名称" width="140" />
@@ -122,8 +122,8 @@
           <el-table-column prop="sort" label="排序" width="80" />
           <el-table-column label="操作" width="130">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openLevel(row)">编辑</el-button>
-              <el-button link type="danger" @click="removeLevel(row)">删除</el-button>
+              <el-button v-perm="'admin:config:member'" link type="primary" @click="openLevel(row)">编辑</el-button>
+              <el-button v-perm="'admin:config:member'" link type="danger" @click="removeLevel(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -137,16 +137,20 @@
             <el-input-number v-model="pointsForm['earn-amount-per-point']" :min="0.01" :step="1" :precision="2" class="inline-num" />
             元累计 1 积分
           </el-form-item>
-          <el-form-item label="积分商城倍数">
-            <el-input-number v-model="pointsForm['mall-rate']" :min="0.1" :step="0.1" :precision="2" class="inline-num" />
-            倍（积分价 = 原价 × 倍数）
+          <el-form-item label="下单抵现比例">
+            <el-input-number v-model="pointsForm['deduct-points-per-yuan']" :min="0" :step="10" class="inline-num" />
+            积分抵 1 元（0 表示关闭抵现）
+          </el-form-item>
+          <el-form-item label="下单抵现上限">
+            <el-input-number v-model="pointsForm['deduct-max-percent']" :min="0" :max="100" :step="5" class="inline-num" />
+            % 应付金额（0 表示关闭抵现）
           </el-form-item>
           <el-form-item label="评价奖励积分">
             <el-input-number v-model="pointsForm['review-reward']" :min="0" :step="1" class="inline-num" />
             积分
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :loading="saving" @click="savePoints">保存积分规则</el-button>
+            <el-button v-perm="'admin:config:save'" type="primary" :loading="saving" @click="savePoints">保存积分规则</el-button>
           </el-form-item>
         </el-form>
       </el-tab-pane>
@@ -159,7 +163,7 @@
             %（正向运单签收后，平台按订单运费的此比例分成，其余归承运物流公司并计入其分红账户）
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :loading="saving" @click="saveDividend">保存分红规则</el-button>
+            <el-button v-perm="'admin:config:save'" type="primary" :loading="saving" @click="saveDividend">保存分红规则</el-button>
           </el-form-item>
         </el-form>
       </el-tab-pane>
@@ -185,7 +189,7 @@
         </div>
         <el-empty v-if="!banners.length" description="暂无 Banner" :image-size="70" />
         <div class="foot">
-          <el-button type="primary" :loading="saving" @click="saveBanners">保存 Banner</el-button>
+          <el-button v-perm="'admin:config:save'" type="primary" :loading="saving" @click="saveBanners">保存 Banner</el-button>
         </div>
       </el-tab-pane>
 
@@ -209,7 +213,7 @@
             @keyup.enter="addStr(list.group)" @select="onListSelect(list.group)"
           />
           <el-button @click="addStr(list.group)">添加</el-button>
-          <el-button type="primary" :loading="saving" @click="saveList(list.group)">保存</el-button>
+          <el-button v-perm="'admin:config:save'" type="primary" :loading="saving" @click="saveList(list.group)">保存</el-button>
         </div>
       </el-tab-pane>
 
@@ -232,12 +236,12 @@
             <el-input-number v-model="systemForm.orderTimeoutMinutes" :min="1" :step="5" />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :loading="saving" @click="saveSystem">保存系统参数</el-button>
+            <el-button v-perm="'admin:config:save'" type="primary" :loading="saving" @click="saveSystem">保存系统参数</el-button>
           </el-form-item>
         </el-form>
       </el-tab-pane>
       <!-- ==================== 区域配置 ==================== -->
-      <el-tab-pane label="区域配置" name="regions">
+      <el-tab-pane v-if="userStore.hasPerm('admin:config:region')" label="区域配置" name="regions">
         <div class="pane-head">
           <el-breadcrumb v-if="!regionSearchKey" separator="/">
             <el-breadcrumb-item>
@@ -250,7 +254,7 @@
           <span v-else class="tip">搜索「{{ regionSearchKey }}」{{ regionSearchResults.length >= 100 ? '前 100 条' : `共 ${regionSearchResults.length} 条` }}</span>
           <div style="display: flex; gap: 10px">
             <el-input v-model="regionSearchKey" placeholder="搜索区域名称" clearable style="width: 200px" />
-            <el-button type="primary" @click="openRegion()">新增区域</el-button>
+            <el-button v-perm="'admin:config:region'" type="primary" @click="openRegion()">新增区域</el-button>
           </div>
         </div>
 
@@ -271,9 +275,9 @@
             <el-table-column label="操作" width="230">
               <template #default="{ row }">
                 <el-button v-if="row.level < 3" link type="primary" @click="gotoRegion(row)">进入</el-button>
-                <el-button link type="primary" @click="openRegion(null, row)">编辑</el-button>
-                <el-button link :type="row.status === 0 ? 'success' : 'warning'" @click="toggleRegion(row)">{{ row.status === 0 ? '启用' : '停用' }}</el-button>
-                <el-button link type="danger" @click="removeRegion(row)">删除</el-button>
+                <el-button v-perm="'admin:config:region'" link type="primary" @click="openRegion(null, row)">编辑</el-button>
+                <el-button v-perm="'admin:config:region'" link :type="row.status === 0 ? 'success' : 'warning'" @click="toggleRegion(row)">{{ row.status === 0 ? '启用' : '停用' }}</el-button>
+                <el-button v-perm="'admin:config:region'" link type="danger" @click="removeRegion(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -293,10 +297,10 @@
             <el-table-column label="操作" width="280">
               <template #default="{ row }">
                 <el-button v-if="row.level < 3" link type="primary" @click="enterRegion(row)">进入</el-button>
-                <el-button v-if="row.level < 3" link type="primary" @click="openRegion(row)">新增下级</el-button>
-                <el-button link type="primary" @click="openRegion(null, row)">编辑</el-button>
-                <el-button link :type="row.status === 0 ? 'success' : 'warning'" @click="toggleRegion(row)">{{ row.status === 0 ? '启用' : '停用' }}</el-button>
-                <el-button link type="danger" @click="removeRegion(row)">删除</el-button>
+                <el-button v-if="row.level < 3" v-perm="'admin:config:region'" link type="primary" @click="openRegion(row)">新增下级</el-button>
+                <el-button v-perm="'admin:config:region'" link type="primary" @click="openRegion(null, row)">编辑</el-button>
+                <el-button v-perm="'admin:config:region'" link :type="row.status === 0 ? 'success' : 'warning'" @click="toggleRegion(row)">{{ row.status === 0 ? '启用' : '停用' }}</el-button>
+                <el-button v-perm="'admin:config:region'" link type="danger" @click="removeRegion(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -415,8 +419,12 @@ import {
   renameRegion,
   setRegionStatus
 } from '../../api/config'
+import { useUserStore } from '../../store/user'
 
-const tab = ref('specs')
+const userStore = useUserStore()
+
+// 无「规格模板」权限时默认落到不受权限控制的基础 tab，避免落在被隐藏的 tab 上
+const tab = ref(userStore.hasPerm('admin:config:spec') ? 'specs' : 'pay-method')
 const loading = ref(false)
 const saving = ref(false)
 const dialogSaving = ref(false)
@@ -478,7 +486,7 @@ const payForm = ref([])
 // 服务保障：动态 key 行（与支付方式同模型，key 可增删）
 const guaranteeForm = ref([])
 
-const pointsForm = reactive({ 'earn-amount-per-point': 1, 'mall-rate': 1, 'review-reward': 10 })
+const pointsForm = reactive({ 'earn-amount-per-point': 1, 'deduct-points-per-yuan': 100, 'deduct-max-percent': 50, 'review-reward': 10 })
 const dividendForm = reactive({ 'platform-ratio': 15 })
 
 const DEFAULT_BANNERS = [
@@ -524,7 +532,8 @@ const DESCRIPTIONS = {
   'service-guarantee': {},
   'points-rule': {
     'earn-amount-per-point': '每消费多少元累计 1 积分',
-    'mall-rate': '积分商城倍数：积分价 = 原价 × 倍数',
+    'deduct-points-per-yuan': '下单抵现：多少积分抵 1 元（0 或未配置表示关闭抵现）',
+    'deduct-max-percent': '下单抵现：最多抵应付金额的百分比',
     'review-reward': '发表评价奖励积分'
   },
   system: {
@@ -591,7 +600,8 @@ function hydrate() {
   })
 
   pointsForm['earn-amount-per-point'] = numberOr(valueOf('points-rule', 'earn-amount-per-point', '1'), 1)
-  pointsForm['mall-rate'] = numberOr(valueOf('points-rule', 'mall-rate', '1'), 1)
+  pointsForm['deduct-points-per-yuan'] = numberOr(valueOf('points-rule', 'deduct-points-per-yuan', '100'), 100)
+  pointsForm['deduct-max-percent'] = numberOr(valueOf('points-rule', 'deduct-max-percent', '50'), 50)
   pointsForm['review-reward'] = numberOr(valueOf('points-rule', 'review-reward', '10'), 10)
 
   dividendForm['platform-ratio'] = numberOr(valueOf('dividend', 'platform-ratio', '15'), 15)
@@ -843,7 +853,8 @@ async function removeLevel(row) {
 function savePoints() {
   return runSave(() => saveGroup('points-rule', {
     'earn-amount-per-point': pointsForm['earn-amount-per-point'],
-    'mall-rate': pointsForm['mall-rate'],
+    'deduct-points-per-yuan': pointsForm['deduct-points-per-yuan'],
+    'deduct-max-percent': pointsForm['deduct-max-percent'],
     'review-reward': pointsForm['review-reward']
   }), '积分规则已保存')
 }

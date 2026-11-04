@@ -127,14 +127,14 @@
       <template #footer>
         <el-button @click="auditDialog = false">关闭</el-button>
         <template v-if="canAudit && !rejecting">
-          <el-button type="danger" @click="startReject">驳回</el-button>
-          <el-button type="success" :loading="auditing" @click="doAudit(true)">
+          <el-button v-perm="'admin:audit:product'" type="danger" @click="startReject">驳回</el-button>
+          <el-button v-perm="'admin:audit:product'" type="success" :loading="auditing" @click="doAudit(true)">
             {{ auditRow?.pendingData ? '通过修改' : '通过' }}
           </el-button>
         </template>
         <template v-if="rejecting">
           <el-button @click="rejecting = false">返回</el-button>
-          <el-button type="danger" :loading="auditing" @click="doAudit(false)">确认驳回</el-button>
+          <el-button v-perm="'admin:audit:product'" type="danger" :loading="auditing" @click="doAudit(false)">确认驳回</el-button>
         </template>
       </template>
     </el-dialog>

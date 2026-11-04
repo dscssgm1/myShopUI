@@ -159,7 +159,10 @@
                     <span v-else>{{ g.emoji }}</span>
                   </div>
                   <div class="sg-name">{{ g.name }}</div>
-                  <div class="sg-price">¥{{ g.discountPrice || g.price }}</div>
+                  <div class="sg-price">
+                    <span v-if="Number(g.price) > shownPrice(g)" class="sg-orig">¥{{ g.price }}</span>
+                    ¥{{ shownPrice(g) }}
+                  </div>
                 </div>
                 <span v-if="!shopLoading && !(shopProductsMap[s.id] || []).length" class="sg-empty">
                   该店铺暂无{{ query.keyword ? '匹配' : '' }}商品
@@ -189,6 +192,10 @@ import { useRoute, useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import { fetchBrands, fetchCategoryTree, fetchProducts } from '../api/product'
 import { fetchShops } from '../api/shop'
+import { attachProductPrices, bestDisplayPrice } from '../utils/productPrice'
+
+/** 店铺小卡展示价：原价 / 商家促销价 / 单件最低到手价 取低 */
+const shownPrice = bestDisplayPrice
 
 const route = useRoute()
 const router = useRouter()
@@ -374,6 +381,8 @@ async function loadShopGoods() {
   results.forEach((r, i) => {
     map[shops.value[i].id] = r.status === 'fulfilled' ? (r.value.data?.list || []) : []
   })
+  // 小卡同样展示单件最低到手价（失败静默，按原价展示）
+  await attachProductPrices(Object.values(map).flat())
   shopProductsMap.value = map
 }
 
@@ -406,6 +415,8 @@ async function loadProducts() {
     })
     products.value = res.data?.list || []
     total.value = res.data?.total || 0
+    // 合并活动/券后的单件最低到手价（失败静默，按原价展示）
+    await attachProductPrices(products.value)
   } catch {
     products.value = []
     total.value = 0
@@ -619,6 +630,13 @@ async function loadProducts() {
   font-weight: 600;
   font-size: 13px;
   margin-top: 4px;
+}
+.sg-orig {
+  color: #bbb;
+  font-size: 11px;
+  font-weight: 400;
+  text-decoration: line-through;
+  margin-right: 4px;
 }
 .sg-empty {
   font-size: 12px;

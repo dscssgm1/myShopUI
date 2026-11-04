@@ -4,7 +4,7 @@
       <div class="head">
         <b>分红结算</b>
         <span class="tip">正向运单签收后，平台与物流公司按比例分成订单运费；比例可在运营配置「dividend / platform-ratio」调整</span>
-        <el-button type="primary" size="small" style="margin-left: auto" @click="openAdjust">平台调账</el-button>
+        <el-button v-perm="'admin:dividend:adjust'" type="primary" size="small" style="margin-left: auto" @click="openAdjust">平台调账</el-button>
       </div>
     </template>
 

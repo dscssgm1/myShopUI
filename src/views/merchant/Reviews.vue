@@ -42,10 +42,10 @@
       <el-table-column label="操作" width="130" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'VISIBLE'">
-            <el-button link type="primary" size="small" @click="openReply(row)">
+            <el-button v-perm="'merchant:reviews:reply'" link type="primary" size="small" @click="openReply(row)">
               {{ row.reply ? '修改回复' : '回复' }}
             </el-button>
-            <el-button v-if="!row.reported" link type="danger" size="small" @click="report(row)">举报</el-button>
+            <el-button v-if="!row.reported" v-perm="'merchant:reviews:report'" link type="danger" size="small" @click="report(row)">举报</el-button>
           </template>
           <span v-else class="muted">—</span>
         </template>

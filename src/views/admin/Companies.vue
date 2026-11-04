@@ -7,7 +7,7 @@
           <el-tooltip content="仅平台管理员可新增、编辑与启停物流公司" placement="left">
             <span class="tip">🔒 仅平台管理员可操作</span>
           </el-tooltip>
-          <el-button type="primary" size="small" style="margin-left: 12px" @click="openAdd">+ 新增物流公司</el-button>
+          <el-button v-perm="'admin:companies:create'" type="primary" size="small" style="margin-left: 12px" @click="openAdd">+ 新增物流公司</el-button>
         </div>
       </div>
     </template>
@@ -29,7 +29,7 @@
       </el-table-column>
       <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+          <el-button v-perm="'admin:companies:update'" link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
           <el-button link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="toggle(row)">
             {{ row.status === 1 ? '取消入驻' : '入驻' }}
           </el-button>

@@ -38,20 +38,77 @@
           <div class="item-mid">
             <div class="item-name">{{ item.productName }}</div>
             <div v-if="item.skuSpecs" class="item-sku">{{ item.skuSpecs }}</div>
+            <div v-if="(item.itemPromotions || []).length || (item.itemCoupons || []).length" class="item-tags">
+              <el-tag
+                v-for="p in item.itemPromotions || []"
+                :key="`ip-${p.id}`"
+                size="small"
+                effect="plain"
+                type="danger"
+              >
+                活动「{{ p.title }}」-¥{{ p.amount }}
+              </el-tag>
+              <el-tag
+                v-for="c in item.itemCoupons || []"
+                :key="`ic-${c.id}`"
+                size="small"
+                effect="plain"
+                type="warning"
+              >
+                券「{{ c.title }}」-¥{{ c.amount }}
+              </el-tag>
+            </div>
           </div>
           <div class="item-price">¥{{ item.price }} × {{ item.quantity }}</div>
-          <div class="item-sub">¥{{ item.subtotal }}</div>
+          <div class="item-sub">
+            <span v-if="itemDiscounted(item)" class="item-orig">¥{{ item.subtotal }}</span>
+            <span>¥{{ item.finalSubtotal ?? item.subtotal }}</span>
+          </div>
         </div>
       </div>
     </el-card>
 
     <el-card shadow="never" class="block">
       <template #header>
-        <b>优惠券</b>
-        <span class="hint">不选则自动匹配最优组合；单笔最多叠加 3 张，以各券叠加规则为准</span>
+        <b>促销活动</b>
+        <span class="hint">默认自动勾选本单最省组合；平台侧与同一店铺各只生效一个活动，范围冲突时保留优惠更大的一方，勾选后以实际计价为准</span>
       </template>
-      <el-empty v-if="!availableCoupons.length" :image-size="60" description="暂无可用优惠券，去领券中心逛逛" />
-      <el-checkbox-group v-else v-model="selectedCouponIds" class="coupon-list" @change="loadPreview">
+      <el-empty
+        v-if="!(preview.promotionOptions || []).length"
+        :image-size="60"
+        description="本单暂无可用促销活动"
+      />
+      <el-checkbox-group
+        v-else
+        v-model="selectedPromotionIds"
+        class="coupon-list"
+        @change="onPromotionChange"
+      >
+        <el-checkbox
+          v-for="p in preview.promotionOptions"
+          :key="p.promotionId"
+          :value="p.promotionId"
+          class="coupon-item"
+        >
+          <div class="coupon-body">
+            <span class="c-title">{{ p.title }}</span>
+            <el-tag v-if="p.shopId > 0" size="small" type="warning">{{ p.shopName || '商家活动' }}</el-tag>
+            <el-tag v-else size="small">平台活动</el-tag>
+            <el-tag v-if="p.couponStackable === false" size="small" type="warning">不可与券同用</el-tag>
+            <span class="c-desc">{{ p.ruleText }} · {{ p.scopeText }}</span>
+            <span class="c-apply">本单可减 ¥{{ p.discount }}</span>
+          </div>
+        </el-checkbox>
+      </el-checkbox-group>
+    </el-card>
+
+    <el-card shadow="never" class="block">
+      <template #header>
+        <b>优惠券</b>
+        <span class="hint">打开页面已自动勾选最省钱组合；手动调整后按所选算价，全部取消则回到自动匹配</span>
+      </template>
+      <el-empty v-if="!availableCoupons.length" :image-size="60" description="暂无可用优惠券，可领取下方本单可领券" />
+      <el-checkbox-group v-else v-model="selectedCouponIds" class="coupon-list" @change="onCouponChange">
         <el-checkbox
           v-for="c in availableCoupons"
           :key="c.userCouponId"
@@ -74,6 +131,47 @@
     </el-card>
 
     <el-card shadow="never" class="block">
+      <template #header>
+        <b>本单可领优惠券</b>
+        <span class="hint">按当前商品明细筛选，满足门槛的券可领取后立即用于本单</span>
+      </template>
+      <el-empty v-if="!claimableCoupons.length" :image-size="60" description="暂无可领取的优惠券" />
+      <div v-else class="coupon-list">
+        <div v-for="c in claimableCoupons" :key="c.id" class="coupon-item claim-row">
+          <div class="coupon-body">
+            <span class="c-title">{{ c.title }}</span>
+            <el-tag v-if="c.shopId > 0" size="small" type="warning">{{ c.shopName || '商家券' }}</el-tag>
+            <el-tag v-else size="small">平台券</el-tag>
+            <el-tag v-if="c.claimed" size="small" type="success">已领过</el-tag>
+            <el-tag v-if="c.couponStackable === false" size="small" type="warning">不可与活动同用</el-tag>
+            <span class="c-desc">满 {{ c.thresholdAmount }} 减 {{ c.discountAmount }} · {{ c.scopeText }}</span>
+            <span class="c-apply">本单可抵 ¥{{ c.applicableAmount }}</span>
+            <span class="c-exp">{{ shortTime(c.validEnd) }} 前有效</span>
+          </div>
+          <el-button type="danger" size="small" plain @click="claim(c)">领取</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <el-card shadow="never" class="block">
+      <template #header>
+        <b>积分抵现</b>
+        <span v-if="pointsEnabled" class="hint">{{ preview.pointsPerYuan || 100 }} 积分抵 1 元，最多抵应付金额的一半（比例以平台配置为准）</span>
+      </template>
+      <template v-if="pointsEnabled">
+        <el-checkbox v-model="usePoints" class="points-check" @change="loadPreview">
+          使用积分抵现（当前 {{ preview.pointsAvailable || 0 }} 积分
+          <template v-if="Number(preview.pointsDeduction) > 0">
+            ，本单最多抵 ¥{{ preview.pointsDeduction }}，用 {{ preview.pointsUsed }} 积分
+          </template>
+          <template v-else>，本单暂不可抵</template>）
+        </el-checkbox>
+        <div class="points-tip">抵扣部分由平台补贴承担，退款时按单退回积分</div>
+      </template>
+      <el-empty v-else :image-size="50" description="积分抵现暂未开启或积分不足" />
+    </el-card>
+
+    <el-card shadow="never" class="block">
       <template #header><b>结算信息</b></template>
       <div class="summary">
         <p>商品总额：<span>¥{{ preview.originalAmount || 0 }}</span></p>
@@ -83,6 +181,9 @@
           已用「{{ u.title }}」：<span>-¥{{ u.discount }}</span>
         </p>
         <p>运费：<span>¥{{ preview.freightAmount || 0 }}</span></p>
+        <p v-if="Number(preview.pointsDeduction) > 0" class="used">
+          积分抵扣（{{ preview.pointsUsed }} 积分）：<span>-¥{{ preview.pointsDeduction }}</span>
+        </p>
         <p v-if="Number(preview.platformBearAmount) > 0 || Number(preview.merchantBearAmount) > 0" class="bear">
           优惠构成：平台承担 ¥{{ preview.platformBearAmount || 0 }} · 商家承担 ¥{{ preview.merchantBearAmount || 0 }}
         </p>
@@ -104,18 +205,33 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createOrder, fetchAddresses, previewOrder } from '../api/trade'
-import { fetchAvailableCoupons } from '../api/promotion'
+import { claimCoupon, fetchAvailableCoupons, fetchClaimableCoupons } from '../api/promotion'
 import AddressPickerDialog from '../components/AddressPickerDialog.vue'
 
 const router = useRouter()
 const items = ref([])
 const preview = ref({ shops: [] })
 const availableCoupons = ref([])
+const claimableCoupons = ref([])
+/** 勾选状态：打开页面即由引擎最优组合自动填入 */
 const selectedCouponIds = ref([])
+const selectedPromotionIds = ref([])
+/** auto = 不带选择交给引擎选最优；manual = 用户手动指定的精确集合 */
+const couponMode = ref('auto')
+const promotionMode = ref('auto')
 const loading = ref(false)
 const submitting = ref(false)
 const pickerVisible = ref(false)
 const current = ref(null)
+const usePoints = ref(false)
+
+/** 积分抵现是否可用：后端开启（比例已配置）且账户有积分 */
+const pointsEnabled = computed(() =>
+  Number(preview.value.pointsPerYuan) > 0 && Number(preview.value.pointsAvailable) > 0
+)
+
+// 抵现开关打开但不可抵时自动回落，避免提交带上无效参数
+const effectiveUsePoints = computed(() => usePoints.value && pointsEnabled.value && Number(preview.value.pointsDeduction) > 0)
 
 /** 当前预览中生效的活动优惠（>0 时「不可与活动同用」的券需禁用） */
 const activePromotionDiscount = computed(() => Number(preview.value.promotionDiscount) || 0)
@@ -145,7 +261,7 @@ onMounted(async () => {
     return
   }
   await Promise.all([loadDefaultAddress(), loadPreview()])
-  loadCoupons()
+  await Promise.all([loadCoupons(), loadClaimable()])
 })
 
 /** 进入结算页默认选中用户设置的默认地址（无默认则取第一条） */
@@ -168,17 +284,64 @@ function orderItems() {
   }))
 }
 
+/** 用户勾选券：清空的语义是「回到自动最优」（后端空数组=自动），非空则精确使用 */
+function onCouponChange(ids) {
+  couponMode.value = ids.length ? 'manual' : 'auto'
+  loadPreview()
+}
+
+/**
+ * 用户勾选活动：空数组表示不使用活动（后端明确支持），非空为精确集合；
+ * 勾选的活动不可与券同用时，券退回自动最优，由引擎比较「活动 vs 仅用券」取更省方案。
+ */
+function onPromotionChange(ids) {
+  promotionMode.value = 'manual'
+  const options = preview.value.promotionOptions || []
+  const blocksCoupon = ids.some((id) => {
+    const picked = options.find((p) => p.promotionId === id)
+    return !!picked && picked.couponStackable === false
+  })
+  if (blocksCoupon) couponMode.value = 'auto'
+  loadPreview()
+}
+
+/** 算价请求的选择参数：auto 传 null 由引擎选最优，manual 传精确集合 */
+function selectionPayload() {
+  return {
+    items: orderItems(),
+    couponIds: couponMode.value === 'manual' ? selectedCouponIds.value.slice() : null,
+    promotionIds: promotionMode.value === 'manual' ? selectedPromotionIds.value.slice() : null
+  }
+}
+
 async function loadPreview() {
   loading.value = true
   try {
-    const res = await previewOrder({
-      items: orderItems(),
-      couponIds: selectedCouponIds.value.length ? selectedCouponIds.value : null
-    })
-    preview.value = res.data || { shops: [] }
-  } catch { /* ignore */ } finally {
+    const res = await previewOrder({ ...selectionPayload(), usePoints: usePoints.value || null })
+    applyPreview(res.data || { shops: [] })
+  } catch {
+    // 手动组合失效（如券与刚选的活动冲突被后端拒绝）：退回全自动重新算价
+    if (couponMode.value === 'manual' || promotionMode.value === 'manual') {
+      couponMode.value = 'auto'
+      promotionMode.value = 'auto'
+      try {
+        const res = await previewOrder({ ...selectionPayload(), usePoints: usePoints.value || null })
+        applyPreview(res.data || { shops: [] })
+      } catch { /* ignore */ }
+    }
+  } finally {
     loading.value = false
   }
+}
+
+/** 用引擎实际生效项回填勾选状态：自动模式下即「打开页面自动勾选最便宜的券组合」 */
+function applyPreview(data) {
+  preview.value = data
+  if (couponMode.value === 'auto') {
+    selectedCouponIds.value = (data.appliedCoupons || []).map((u) => u.couponId)
+  }
+  // 手动选活动时，范围冲突的活动被引擎保留较大一侧，勾选以最终生效集合为准，避免与计价展示不一致
+  selectedPromotionIds.value = data.appliedPromotionIds || []
 }
 
 /** 可用券列表按预览返回的商品明细计算（含 categoryId/shopId/单价），券抵扣金额才准确 */
@@ -202,6 +365,29 @@ async function loadCoupons() {
   } catch { availableCoupons.value = [] }
 }
 
+/** 本单可领券：按当前明细过滤（范围命中 + 达门槛 + 未达限领/未领完） */
+async function loadClaimable() {
+  if (!discountItems().length) return
+  try {
+    const res = await fetchClaimableCoupons(discountItems())
+    claimableCoupons.value = res.data || []
+  } catch { claimableCoupons.value = [] }
+}
+
+/** 领取本单可领券：刷新可领/可用列表，自动模式下重新算价让新券参与最优组合 */
+async function claim(c) {
+  try {
+    await claimCoupon(c.id)
+    ElMessage.success(`已领取「${c.title}」`)
+    await Promise.all([loadClaimable(), loadCoupons()])
+    if (couponMode.value === 'auto') await loadPreview()
+  } catch { /* 错误提示由请求层统一处理 */ }
+}
+
+/** 本行是否享优惠（决定是否展示划线原价） */
+const itemDiscounted = (item) =>
+  Number(item.promotionDiscount) + Number(item.couponDiscount) > 0
+
 const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 10) : '')
 
 async function submit() {
@@ -213,20 +399,20 @@ async function submit() {
   submitting.value = true
   try {
     const res = await createOrder({
-      items: orderItems(),
-      couponIds: selectedCouponIds.value.length ? selectedCouponIds.value : null,
+      ...selectionPayload(),
+      usePoints: effectiveUsePoints.value || null,
       receiverName: current.value.receiverName,
       receiverPhone: current.value.receiverPhone,
       receiverAddress: current.value.address
     })
     sessionStorage.removeItem('ms_checkout_items')
     const orders = res.data.orders || []
-    ElMessage.success(orders.length > 1
-      ? `已按店铺生成 ${orders.length} 个订单，去支付`
-      : '订单已创建，去支付')
-    if (orders.length > 1) {
-      router.push({ path: '/pay', query: { orders: orders.map((o) => o.orderNo).join(',') } })
+    if (res.data.groupNo) {
+      // 跨店合单：生成订单组（父订单），收银台整组一次付清
+      ElMessage.success(`已按店铺生成 ${orders.length} 个订单并合并支付，去支付`)
+      router.push({ path: '/pay', query: { group: res.data.groupNo } })
     } else {
+      ElMessage.success('订单已创建，去支付')
       router.push(`/pay/${res.data.orderNo}`)
     }
   } catch { /* ignore */ } finally {
@@ -329,6 +515,17 @@ h3 {
   color: #396afc;
   margin-top: 3px;
 }
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.item-orig {
+  color: #bbb;
+  text-decoration: line-through;
+  margin-right: 6px;
+}
 .item-price {
   color: #999;
   font-size: 13px;
@@ -381,6 +578,12 @@ h3 {
   gap: 10px;
   font-size: 13px;
 }
+.claim-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .c-title {
   font-weight: 600;
   color: #333;
@@ -398,6 +601,20 @@ h3 {
 .c-exp {
   color: #bbb;
   font-size: 12px;
+}
+.points-check {
+  display: flex;
+  align-items: flex-start;
+  height: auto;
+}
+.points-check :deep(.el-checkbox__label) {
+  white-space: normal;
+  line-height: 1.6;
+}
+.points-tip {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 6px;
 }
 .final {
   font-weight: 700;

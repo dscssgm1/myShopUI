@@ -31,7 +31,7 @@
       </el-table-column>
       <el-table-column label="操作" width="110" fixed="right">
         <template #default="{ row }">
-          <el-button v-if="row.status === 'PAID'" link type="primary" size="small" @click="ship(row)">发货</el-button>
+          <el-button v-if="row.status === 'PAID'" v-perm="'merchant:orders:ship'" link type="primary" size="small" @click="ship(row)">发货</el-button>
         </template>
       </el-table-column>
     </el-table>

@@ -7,7 +7,7 @@
         <el-radio-button value="APPEALING">待处理申诉</el-radio-button>
         <el-radio-button value="PENDING_MERCHANT">商家待审核</el-radio-button>
       </el-radio-group>
-      <el-button size="small" type="primary" class="create-btn" @click="openCreate">代用户发起售后</el-button>
+      <el-button v-perm="'admin:audit:aftersale'" size="small" type="primary" class="create-btn" @click="openCreate">代用户发起售后</el-button>
     </div>
 
     <el-table :data="items" size="small" v-loading="loading">
@@ -38,14 +38,17 @@
           <el-button link type="primary" size="small" @click="openDetail(row.afterSaleNo)">详情</el-button>
           <el-button
             v-if="row.status === 'PENDING_PLATFORM'"
+            v-perm="'admin:audit:aftersale'"
             link type="warning" size="small" @click="openReview(row, 'platform')"
           >审核</el-button>
           <el-button
             v-if="row.status === 'APPEALING'"
+            v-perm="'admin:audit:aftersale'"
             link type="danger" size="small" @click="openReview(row, 'appeal')"
           >处理申诉</el-button>
           <el-button
             v-if="row.status === 'APPROVED'"
+            v-perm="'admin:audit:aftersale'"
             link type="danger" size="small" @click="refund(row)"
           >退款</el-button>
         </template>
@@ -207,14 +210,17 @@
         <div class="drawer-actions">
           <el-button
             v-if="detail.status === 'PENDING_PLATFORM'"
+            v-perm="'admin:audit:aftersale'"
             type="primary" @click="openReview(detail, 'platform')"
           >审核</el-button>
           <el-button
             v-if="detail.status === 'APPEALING'"
+            v-perm="'admin:audit:aftersale'"
             type="danger" @click="openReview(detail, 'appeal')"
           >处理申诉</el-button>
           <el-button
             v-if="detail.status === 'APPROVED'"
+            v-perm="'admin:audit:aftersale'"
             type="danger" @click="refund(detail)"
           >代为退款</el-button>
         </div>

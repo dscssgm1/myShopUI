@@ -48,7 +48,7 @@
       <el-table-column label="操作" width="130" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="viewShop(row)">详情</el-button>
-          <el-button link :type="row.status === 1 ? 'danger' : 'success'" size="small" @click="toggleShop(row)">
+          <el-button v-perm="'admin:shops:status'" link :type="row.status === 1 ? 'danger' : 'success'" size="small" @click="toggleShop(row)">
             {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>
         </template>
@@ -106,7 +106,7 @@
           <el-descriptions-item label="入驻时间">{{ formatTime(currentShop.createdAt) }}</el-descriptions-item>
         </el-descriptions>
         <div class="drawer-actions">
-          <el-button :type="currentShop.status === 1 ? 'danger' : 'success'" @click="toggleShop(currentShop)">
+          <el-button v-perm="'admin:shops:status'" :type="currentShop.status === 1 ? 'danger' : 'success'" @click="toggleShop(currentShop)">
             {{ currentShop.status === 1 ? '停用店铺' : '启用店铺' }}
           </el-button>
         </div>

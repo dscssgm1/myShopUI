@@ -3,8 +3,8 @@
     <div class="head">
       <h3>🏷️ 我的规格</h3>
       <div class="head-actions">
-        <el-button size="small" @click="openImport">⬇ 导入平台模板</el-button>
-        <el-button type="primary" size="small" @click="openAdd">+ 新增规格</el-button>
+        <el-button v-perm="'merchant:specs:create'" size="small" @click="openImport">⬇ 导入平台模板</el-button>
+        <el-button v-perm="'merchant:specs:create'" type="primary" size="small" @click="openAdd">+ 新增规格</el-button>
       </div>
     </div>
     <p class="sub">维护店铺自己的规格与规格值（如 颜色、尺码、容量），发布商品时从这里选择并按组合设置价格。</p>
@@ -23,8 +23,8 @@
       <el-table-column prop="sort" label="排序" width="80" />
       <el-table-column label="操作" width="140">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="danger" size="small" @click="remove(row)">删除</el-button>
+          <el-button v-perm="'merchant:specs:create'" link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+          <el-button v-perm="'merchant:specs:delete'" link type="danger" size="small" @click="remove(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

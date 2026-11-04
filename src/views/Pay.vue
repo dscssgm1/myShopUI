@@ -13,7 +13,7 @@
     <template v-else-if="orders.length">
       <h3>💰 收银台</h3>
       <div class="order-brief">
-        <span>待支付订单 {{ orders.length }} 个</span>
+        <span>待支付订单 {{ orders.length }} 个{{ isGroup ? '（跨店合单 · 整组一次付清）' : '' }}</span>
         <span class="amt">¥{{ totalAmount }}</span>
         <span class="countdown">支付剩余时间：{{ countdown }}</span>
       </div>
@@ -63,7 +63,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createPayment, fetchOrderDetail, payOrder } from '../api/trade'
+import { createGroupPayment, createPayment, fetchOrderDetail, fetchOrderGroup, payOrder } from '../api/trade'
 import { fetchPublicConfigMap, parseConfigJson } from '../api/config'
 
 const route = useRoute()
@@ -77,6 +77,8 @@ const PAY_DEFS = [
 ]
 
 const orders = ref([])
+const groupNo = ref('')
+const group = ref(null)
 const loading = ref(false)
 const paying = ref(false)
 const paid = ref(false)
@@ -90,8 +92,10 @@ onUnmounted(() => clearInterval(timer))
 const enabledMethods = computed(() => methods.value.filter((m) => m.enabled))
 const currentMethod = computed(() => methods.value.find((m) => m.code === method.value))
 const methodName = computed(() => currentMethod.value?.label || '支付方式')
-const totalAmount = computed(() => orders.value
-  .reduce((n, o) => n + Number(o.payAmount || 0), 0).toFixed(2))
+const isGroup = computed(() => !!groupNo.value)
+const totalAmount = computed(() => isGroup.value
+  ? Number(group.value?.payAmount || 0).toFixed(2)
+  : orders.value.reduce((n, o) => n + Number(o.payAmount || 0), 0).toFixed(2))
 const countdown = computed(() => {
   const m = String(Math.floor(seconds.value / 60)).padStart(2, '0')
   const s = String(seconds.value % 60).padStart(2, '0')
@@ -130,6 +134,15 @@ async function loadPayConfig() {
 async function load() {
   loading.value = true
   try {
+    if (route.query.group) {
+      // 跨店合单：按订单组（父订单）加载，收银台一次付清
+      groupNo.value = String(route.query.group)
+      const res = await fetchOrderGroup(groupNo.value)
+      group.value = res.data
+      orders.value = res.data?.orders || []
+      paid.value = res.data?.status === 'PAID'
+      return
+    }
     const list = orderNos()
     const results = []
     for (const no of list) {
@@ -159,10 +172,16 @@ async function doPay() {
   }
   paying.value = true
   try {
-    for (const order of orders.value) {
-      if (PAID_STATUSES.includes(order.status)) continue
-      const created = await createPayment(order.orderNo, method.value)
+    if (isGroup.value) {
+      // 合单：一张支付单整组一次付清
+      const created = await createGroupPayment(groupNo.value, method.value)
       await payOrder(created.data.paymentNo)
+    } else {
+      for (const order of orders.value) {
+        if (PAID_STATUSES.includes(order.status)) continue
+        const created = await createPayment(order.orderNo, method.value)
+        await payOrder(created.data.paymentNo)
+      }
     }
     paid.value = true
     ElMessage.success('支付成功')

@@ -9,7 +9,7 @@
             <el-radio-button value="active">进行中</el-radio-button>
             <el-radio-button value="ENDED">已结束</el-radio-button>
           </el-radio-group>
-          <el-button type="primary" size="small" @click="openAdd">+ 新建活动</el-button>
+          <el-button v-perm="'admin:promotions:create'" type="primary" size="small" @click="openAdd">+ 新建活动</el-button>
         </div>
       </div>
     </template>
@@ -55,8 +55,8 @@
           <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
               <template v-if="row.shopId === 0">
-                <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
-                <el-button v-if="row.status === 'ACTIVE'" link type="danger" size="small" @click="end(row)">结束</el-button>
+                <el-button v-perm="'admin:promotions:update'" link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+                <el-button v-if="row.status === 'ACTIVE'" v-perm="'admin:promotions:end'" link type="danger" size="small" @click="end(row)">结束</el-button>
               </template>
               <span v-else class="sub">商家维护</span>
             </template>
@@ -97,8 +97,8 @@
           <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
               <template v-if="row.status === 'PENDING'">
-                <el-button link type="success" size="small" @click="approve(row)">通过</el-button>
-                <el-button link type="danger" size="small" @click="reject(row)">驳回</el-button>
+                <el-button v-perm="'admin:promotions:enrollment'" link type="success" size="small" @click="approve(row)">通过</el-button>
+                <el-button v-perm="'admin:promotions:enrollment'" link type="danger" size="small" @click="reject(row)">驳回</el-button>
               </template>
               <span v-else class="sub">已处理</span>
             </template>
@@ -157,11 +157,12 @@
           <el-radio-group v-model="form.scopeType">
             <el-radio-button value="ALL">全场</el-radio-button>
             <el-radio-button value="CATEGORY">指定分类</el-radio-button>
-            <el-radio-button value="PRODUCT">指定商品</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="form.scopeType !== 'ALL'" label="范围 ID">
-          <el-input v-model="form.scopeIdsText" placeholder="多个 ID 用英文逗号分隔，如：1,2,3" />
+        <el-form-item v-if="form.scopeType === 'CATEGORY'" label="选择分类">
+          <el-select v-model="form.scopeIds" multiple filterable placeholder="选择活动分类（大类）" style="width: 100%">
+            <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
         </el-form-item>
         <el-form-item label="可叠加券">
           <el-switch v-model="form.couponStackable" />
@@ -205,6 +206,7 @@ import {
   approveEnrollment, createPromotion, endPromotion, fetchAdminPromotions,
   fetchEnrollments, rejectEnrollment, updatePromotion
 } from '../../api/admin'
+import { categoryNames, loadTopCategories } from '../../utils/categoryOptions'
 
 const TYPES = ['平台大促', '品类促销', '限时秒杀', '领券中心']
 const STATUS_TAG = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
@@ -215,11 +217,12 @@ const status = ref('all')
 const loading = ref(false)
 const dialog = ref(false)
 const editing = ref(null)
+const categoryOptions = ref([])
 const form = reactive({
   title: '', type: '平台大促', ruleType: 'FULL_REDUCTION',
   thresholdAmount: 0, discountAmount: 0, perEvery: 0,
   discountRate: 0.8, maxDiscount: 0,
-  scopeType: 'ALL', scopeIdsText: '', couponStackable: false,
+  scopeType: 'ALL', scopeIds: [], couponStackable: false,
   enrollRequired: false, platformBearRate: 0,
   startTime: '', endTime: '', description: '', color: '#ff4b2b'
 })
@@ -232,7 +235,10 @@ const enrollTotal = ref(0)
 const enrollLoading = ref(false)
 const pendingCount = ref(0)
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadTopCategories().then((list) => (categoryOptions.value = list))
+})
 
 const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(5, 16) : '不限')
 
@@ -246,10 +252,11 @@ function ruleText(row) {
 }
 
 function scopeText(row) {
-  const label = { ALL: '全场', CATEGORY: '指定分类', PRODUCT: '指定商品', SHOP: '本店商品' }[row.scopeType] || row.scopeType
-  if (row.scopeType === 'ALL' || row.scopeType === 'SHOP') return label
-  if (row.enrollRequired) return `${label}（报名审核后生效）`
-  return `${label} #${(row.scopeIds || []).join(', #')}`
+  if (row.scopeType === 'CATEGORY') {
+    const names = categoryNames(row.scopeIds, categoryOptions.value).join('、')
+    return row.enrollRequired ? `指定分类：${names}（报名审核后生效）` : `指定分类：${names}`
+  }
+  return { ALL: '全场', SHOP: '本店商品', PRODUCT: '指定商品' }[row.scopeType] || row.scopeType
 }
 
 function bearText(row) {
@@ -294,7 +301,7 @@ function resetForm() {
     title: '', type: '平台大促', ruleType: 'FULL_REDUCTION',
     thresholdAmount: 0, discountAmount: 0, perEvery: 0,
     discountRate: 0.8, maxDiscount: 0,
-    scopeType: 'ALL', scopeIdsText: '', couponStackable: false,
+    scopeType: 'ALL', scopeIds: [], couponStackable: false,
     enrollRequired: false, platformBearRate: 0,
     startTime: '', endTime: '', description: '', color: '#ff4b2b'
   })
@@ -316,7 +323,7 @@ function openEdit(row) {
     discountRate: Number(row.discountRate || 0.8),
     maxDiscount: Number(row.maxDiscount || 0),
     scopeType: row.scopeType || 'ALL',
-    scopeIdsText: (row.scopeIds || []).join(','),
+    scopeIds: [...(row.scopeIds || [])],
     couponStackable: !!row.couponStackable,
     enrollRequired: !!row.enrollRequired,
     platformBearRate: Number(row.platformBearRate || 0),
@@ -327,9 +334,7 @@ function openEdit(row) {
 }
 
 function buildPayload() {
-  const scopeIds = form.scopeIdsText
-    ? form.scopeIdsText.split(',').map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0)
-    : []
+  const scopeIds = form.scopeType === 'CATEGORY' ? [...form.scopeIds] : []
   const payload = {
     title: form.title,
     type: form.type,
@@ -360,6 +365,10 @@ function buildPayload() {
 async function save() {
   if (!form.title.trim()) {
     ElMessage.warning('请填写活动名称')
+    return
+  }
+  if (form.scopeType === 'CATEGORY' && !form.scopeIds.length) {
+    ElMessage.warning('请选择活动分类')
     return
   }
   const payload = buildPayload()

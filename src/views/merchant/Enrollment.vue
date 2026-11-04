@@ -29,7 +29,7 @@
           <div class="activity-line">活动时间：{{ shortTime(a.startTime) }} ~ {{ shortTime(a.endTime) }}</div>
           <div v-if="a.description" class="activity-line desc">{{ a.description }}</div>
           <div class="activity-foot">
-            <el-button type="primary" size="small" @click="openApply(a)">为商品报名</el-button>
+            <el-button v-perm="'merchant:enrollment:apply'" type="primary" size="small" @click="openApply(a)">为商品报名</el-button>
           </div>
         </el-card>
       </el-col>
@@ -101,6 +101,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchProducts } from '../../api/product'
 import { applyEnrollment, fetchEnrollablePromotions, fetchMyEnrollments } from '../../api/promotion'
+import { categoryNames, loadTopCategories } from '../../utils/categoryOptions'
 import { useUserStore } from '../../store/user'
 
 const userStore = useUserStore()
@@ -112,6 +113,7 @@ const activities = ref([])
 const records = ref([])
 const loading = ref(false)
 const myProducts = ref([])
+const categoryOptions = ref([])
 
 const applyDialog = ref(false)
 const applyTarget = ref(null)
@@ -120,6 +122,7 @@ const applySelection = ref([])
 onMounted(() => {
   load()
   loadProducts()
+  loadTopCategories().then((list) => (categoryOptions.value = list))
 })
 
 const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(5, 16) : '不限')
@@ -147,8 +150,11 @@ function ruleText(a) {
 }
 
 function scopeText(a) {
-  const label = { ALL: '全场商品', CATEGORY: '指定分类', PRODUCT: '指定商品' }[a.scopeType] || a.scopeType
-  if (a.scopeType === 'ALL') return label
+  if (a.scopeType === 'ALL') return '全场商品'
+  if (a.scopeType === 'CATEGORY') {
+    return `指定分类：${categoryNames(a.scopeIds, categoryOptions.value).join('、')}（仅范围内商品可报名）`
+  }
+  const label = { PRODUCT: '指定商品' }[a.scopeType] || a.scopeType
   return `${label} #${(a.scopeIds || []).join(', #')}（仅范围内商品可报名）`
 }
 

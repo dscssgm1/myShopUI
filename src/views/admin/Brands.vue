@@ -6,7 +6,7 @@
           <b>品牌管理</b>
           <span class="tip">平台统一维护品牌库，商家发布商品时选择；品牌不纳入配置中心。</span>
         </div>
-        <el-button type="primary" @click="openDialog()">新增品牌</el-button>
+        <el-button v-perm="'admin:brands:create'" type="primary" @click="openDialog()">新增品牌</el-button>
       </div>
     </template>
 
@@ -21,8 +21,8 @@
       <el-table-column prop="sort" label="排序" width="100" />
       <el-table-column label="操作" width="150">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-          <el-button link type="danger" @click="remove(row)">删除</el-button>
+          <el-button v-perm="'admin:brands:update'" link type="primary" @click="openDialog(row)">编辑</el-button>
+          <el-button v-perm="'admin:brands:delete'" link type="danger" @click="remove(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

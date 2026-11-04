@@ -12,7 +12,7 @@
       <el-tab-pane label="店铺活动" name="promotions">
         <div class="pane-head">
           <span class="tip">限时折扣 / 满减活动，进行中的活动会在商品列表展示角标</span>
-          <el-button type="primary" size="small" @click="openPromo()">+ 新建活动</el-button>
+          <el-button v-perm="'merchant:marketing:promo-create'" type="primary" size="small" @click="openPromo()">+ 新建活动</el-button>
         </div>
         <el-table :data="promos" size="small" v-loading="promoLoading">
           <el-table-column label="活动" min-width="220">
@@ -45,8 +45,8 @@
           </el-table-column>
           <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" size="small" @click="openPromo(row)">编辑</el-button>
-              <el-button v-if="row.status === 'ACTIVE'" link type="danger" size="small" @click="endPromo(row)">结束</el-button>
+              <el-button v-perm="'merchant:marketing:promo-update'" link type="primary" size="small" @click="openPromo(row)">编辑</el-button>
+              <el-button v-if="row.status === 'ACTIVE'" v-perm="'merchant:marketing:promo-end'" link type="danger" size="small" @click="endPromo(row)">结束</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -55,8 +55,8 @@
       <!-- ==================== 店铺优惠券 ==================== -->
       <el-tab-pane label="店铺优惠券" name="coupons">
         <div class="pane-head">
-          <span class="tip">买家在领券中心领取，仅限本店商品使用；优惠金额由店铺承担</span>
-          <el-button type="primary" size="small" @click="openCoupon()">+ 发放优惠券</el-button>
+          <span class="tip">买家在领券中心领取，仅限本店商品使用；设置积分价的券在积分商城售卖，优惠费用由店铺承担</span>
+          <el-button v-perm="'merchant:marketing:coupon-create'" type="primary" size="small" @click="openCoupon()">+ 发放优惠券</el-button>
         </div>
         <el-table :data="coupons" size="small" v-loading="couponLoading">
           <el-table-column label="优惠券" min-width="180">
@@ -73,6 +73,12 @@
           </el-table-column>
           <el-table-column label="每人限领" width="90">
             <template #default="{ row }">{{ row.perUserLimit }} 张</template>
+          </el-table-column>
+          <el-table-column label="积分价" width="90">
+            <template #default="{ row }">
+              <span v-if="Number(row.pointsPrice) > 0" class="points">{{ row.pointsPrice }} 积分</span>
+              <span v-else class="sub">免费领取</span>
+            </template>
           </el-table-column>
           <el-table-column label="叠加规则" width="150">
             <template #default="{ row }">
@@ -95,7 +101,7 @@
           </el-table-column>
           <el-table-column label="操作" width="100" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.status === 'ACTIVE'" link type="danger" size="small" @click="endCoupon(row)">下架</el-button>
+              <el-button v-if="row.status === 'ACTIVE'" v-perm="'merchant:marketing:coupon-end'" link type="danger" size="small" @click="endCoupon(row)">下架</el-button>
               <span v-else class="sub">—</span>
             </template>
           </el-table-column>
@@ -140,24 +146,14 @@
         <el-form-item label="活动商品">
           <el-radio-group v-model="promoForm.scopeType">
             <el-radio-button value="SHOP">本店全部商品</el-radio-button>
-            <el-radio-button value="PRODUCT">指定商品</el-radio-button>
+            <el-radio-button value="CATEGORY">指定分类</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="promoForm.scopeType === 'PRODUCT'" label="选择商品">
-          <el-select
-            v-model="promoForm.scopeIds"
-            multiple filterable
-            placeholder="选择参加活动的商品"
-            style="width: 100%"
-            :loading="productLoading"
-          >
-            <el-option
-              v-for="p in myProducts"
-              :key="p.id"
-              :label="`${p.name}（¥${p.price}）`"
-              :value="p.id"
-            />
+        <el-form-item v-if="promoForm.scopeType === 'CATEGORY'" label="选择分类">
+          <el-select v-model="promoForm.scopeIds" multiple filterable placeholder="选择参加活动的分类（大类）" style="width: 100%">
+            <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
+          <div class="tip-block">只对本店属于所选分类的商品生效</div>
         </el-form-item>
         <el-form-item label="可叠加券">
           <el-switch v-model="promoForm.couponStackable" />
@@ -197,30 +193,25 @@
         <el-form-item label="适用范围">
           <el-radio-group v-model="couponForm.scopeType">
             <el-radio-button value="SHOP">本店全部商品</el-radio-button>
-            <el-radio-button value="PRODUCT">指定商品</el-radio-button>
+            <el-radio-button value="CATEGORY">指定分类</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="couponForm.scopeType === 'PRODUCT'" label="选择商品">
-          <el-select
-            v-model="couponForm.scopeIds"
-            multiple filterable
-            placeholder="选择可用券的商品"
-            style="width: 100%"
-            :loading="productLoading"
-          >
-            <el-option
-              v-for="p in myProducts"
-              :key="p.id"
-              :label="`${p.name}（¥${p.price}）`"
-              :value="p.id"
-            />
+        <el-form-item v-if="couponForm.scopeType === 'CATEGORY'" label="选择分类">
+          <el-select v-model="couponForm.scopeIds" multiple filterable placeholder="选择可用券的分类（大类）" style="width: 100%">
+            <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
+          <div class="tip-block">券只对本店属于所选分类的商品生效</div>
         </el-form-item>
         <el-form-item label="发放总量" required>
           <el-input-number v-model="couponForm.totalStock" :min="1" /> 张
         </el-form-item>
         <el-form-item label="每人限领" required>
           <el-input-number v-model="couponForm.perUserLimit" :min="1" /> 张
+        </el-form-item>
+        <el-form-item label="积分价">
+          <el-input-number v-model="couponForm.pointsPrice" :min="0" :step="100" />
+          积分
+          <div class="tip-block">填 0 为免费领取的普通券；大于 0 则不上领券中心，只在积分商城用积分兑换</div>
         </el-form-item>
         <el-form-item label="与活动同用">
           <el-switch v-model="couponForm.couponStackable" />
@@ -246,26 +237,21 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchProducts } from '../../api/product'
 import {
   createMerchantCouponTemplate, createMerchantPromotion, endMerchantCouponTemplate,
   endMerchantPromotion, fetchMerchantCouponTemplates, fetchMerchantPromotions,
   updateMerchantPromotion
 } from '../../api/promotion'
-import { useUserStore } from '../../store/user'
-
-const userStore = useUserStore()
-const shopId = computed(() => userStore.user?.shopId)
+import { categoryNames, loadTopCategories } from '../../utils/categoryOptions'
 
 const tab = ref('promotions')
 const promos = ref([])
 const promoLoading = ref(false)
 const coupons = ref([])
 const couponLoading = ref(false)
-const myProducts = ref([])
-const productLoading = ref(false)
+const categoryOptions = ref([])
 
 const promoDialog = ref(false)
 const promoEditing = ref(null)
@@ -281,14 +267,14 @@ const couponDialog = ref(false)
 const couponForm = reactive({
   title: '', thresholdAmount: 0, discountAmount: 10,
   scopeType: 'SHOP', scopeIds: [],
-  totalStock: 100, perUserLimit: 1, couponStackable: true, stackable: true,
+  totalStock: 100, perUserLimit: 1, pointsPrice: 0, couponStackable: true, stackable: true,
   validStart: '', validEnd: ''
 })
 
 onMounted(() => {
   loadPromos()
   loadCoupons()
-  loadProducts()
+  loadTopCategories().then((list) => (categoryOptions.value = list))
 })
 
 const shortTime = (t) => (t ? String(t).replace('T', ' ').slice(5, 16) : '不限')
@@ -303,12 +289,8 @@ function ruleText(row) {
 }
 
 function scopeText(row) {
-  const label = { SHOP: '本店全部', PRODUCT: '指定商品' }[row.scopeType] || row.scopeType
-  if (row.scopeType === 'SHOP') return label
-  const ids = row.scopeIds || []
-  const names = ids.map((id) => myProducts.value.find((p) => p.id === id)?.name)
-  const known = names.filter(Boolean)
-  return known.length === ids.length ? `指定 ${known.length} 个商品` : `${label}（${ids.length} 个）`
+  if (row.scopeType === 'CATEGORY') return `指定分类：${categoryNames(row.scopeIds, categoryOptions.value).join('、')}`
+  return { SHOP: '本店全部', PRODUCT: '指定商品' }[row.scopeType] || row.scopeType
 }
 
 async function loadPromos() {
@@ -325,15 +307,6 @@ async function loadCoupons() {
     const res = await fetchMerchantCouponTemplates()
     coupons.value = res.data || []
   } catch { coupons.value = [] } finally { couponLoading.value = false }
-}
-
-async function loadProducts() {
-  if (!shopId.value) return
-  productLoading.value = true
-  try {
-    const res = await fetchProducts({ shopId: shopId.value, includeAll: true, page: 1, size: 200 })
-    myProducts.value = res.data?.list || []
-  } catch { myProducts.value = [] } finally { productLoading.value = false }
 }
 
 function resetPromoForm() {
@@ -356,7 +329,7 @@ function openPromo(row) {
       perEvery: row.perEvery || 0,
       discountRate: Number(row.discountRate || 0.8),
       maxDiscount: Number(row.maxDiscount || 0),
-      scopeType: row.scopeType === 'PRODUCT' ? 'PRODUCT' : 'SHOP',
+      scopeType: row.scopeType === 'CATEGORY' ? 'CATEGORY' : 'SHOP',
       scopeIds: [...(row.scopeIds || [])],
       couponStackable: !!row.couponStackable,
       startTime: row.startTime || '', endTime: row.endTime || '',
@@ -373,15 +346,15 @@ async function savePromo() {
     ElMessage.warning('请填写活动名称')
     return
   }
-  if (promoForm.scopeType === 'PRODUCT' && !promoForm.scopeIds.length) {
-    ElMessage.warning('请选择参加活动的商品')
+  if (promoForm.scopeType === 'CATEGORY' && !promoForm.scopeIds.length) {
+    ElMessage.warning('请选择参加活动的分类')
     return
   }
   const payload = {
     title: promoForm.title,
     ruleType: promoForm.ruleType,
     scopeType: promoForm.scopeType,
-    scopeIds: promoForm.scopeType === 'PRODUCT' ? promoForm.scopeIds : [],
+    scopeIds: promoForm.scopeType === 'CATEGORY' ? promoForm.scopeIds : [],
     couponStackable: promoForm.couponStackable,
     startTime: promoForm.startTime || null,
     endTime: promoForm.endTime || null,
@@ -418,7 +391,7 @@ function openCoupon() {
   Object.assign(couponForm, {
     title: '', thresholdAmount: 0, discountAmount: 10,
     scopeType: 'SHOP', scopeIds: [],
-    totalStock: 100, perUserLimit: 1, couponStackable: true, stackable: true,
+    totalStock: 100, perUserLimit: 1, pointsPrice: 0, couponStackable: true, stackable: true,
     validStart: '', validEnd: ''
   })
   couponDialog.value = true
@@ -429,8 +402,8 @@ async function saveCoupon() {
     ElMessage.warning('请填写券名称')
     return
   }
-  if (couponForm.scopeType === 'PRODUCT' && !couponForm.scopeIds.length) {
-    ElMessage.warning('请选择可用券的商品')
+  if (couponForm.scopeType === 'CATEGORY' && !couponForm.scopeIds.length) {
+    ElMessage.warning('请选择可用券的分类')
     return
   }
   await createMerchantCouponTemplate({
@@ -438,9 +411,10 @@ async function saveCoupon() {
     thresholdAmount: couponForm.thresholdAmount,
     discountAmount: couponForm.discountAmount,
     scopeType: couponForm.scopeType,
-    scopeIds: couponForm.scopeType === 'PRODUCT' ? couponForm.scopeIds : [],
+    scopeIds: couponForm.scopeType === 'CATEGORY' ? couponForm.scopeIds : [],
     totalStock: couponForm.totalStock,
     perUserLimit: couponForm.perUserLimit,
+    pointsPrice: couponForm.pointsPrice > 0 ? couponForm.pointsPrice : null,
     couponStackable: couponForm.couponStackable,
     stackable: couponForm.stackable,
     validStart: couponForm.validStart || null,
@@ -500,6 +474,15 @@ function endCoupon(row) {
   font-size: 12px;
   color: #999;
   margin-left: 10px;
+}
+.tip-block {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+.points {
+  color: #ff4b2b;
+  font-weight: 600;
 }
 .tag-mr {
   margin-right: 6px;

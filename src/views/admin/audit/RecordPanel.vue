@@ -31,27 +31,27 @@
         <template #default="{ row }">
           <template v-if="row.type === 'LOGISTICS_APPLY'">
             <el-button link size="small" @click="showDetail(row)">资料</el-button>
-            <!-- 初审阶段：仅业务员可审 -->
+            <!-- 初审阶段：有「物流入驻初审」权限者可审 -->
             <template v-if="row.status === 'PENDING'">
-              <template v-if="role === 'admin-sales'">
-                <el-button link type="primary" size="small" @click="first(row)">初审通过</el-button>
-                <el-button link type="danger" size="small" @click="reject(row)">驳回</el-button>
+              <template v-if="userStore.hasPerm('admin:audit:logistics-first')">
+                <el-button v-perm="'admin:audit:logistics-first'" link type="primary" size="small" @click="first(row)">初审通过</el-button>
+                <el-button v-perm="'admin:audit:logistics-first'" link type="danger" size="small" @click="reject(row)">驳回</el-button>
               </template>
-              <span v-else-if="role === 'admin'" class="wait">待业务员初审</span>
+              <span v-else class="wait">待业务员初审</span>
             </template>
-            <!-- 终审阶段：仅管理员可审 -->
+            <!-- 终审阶段：有「物流入驻终审」权限者可审 -->
             <template v-else-if="row.status === 'FIRST_APPROVED'">
-              <template v-if="role === 'admin'">
-                <el-button link type="success" size="small" @click="final(row)">终审通过</el-button>
-                <el-button link type="danger" size="small" @click="reject(row)">驳回</el-button>
+              <template v-if="userStore.hasPerm('admin:audit:logistics-final')">
+                <el-button v-perm="'admin:audit:logistics-final'" link type="success" size="small" @click="final(row)">终审通过</el-button>
+                <el-button v-perm="'admin:audit:logistics-final'" link type="danger" size="small" @click="reject(row)">驳回</el-button>
               </template>
               <span v-else class="wait">已初审，待管理员终审</span>
             </template>
             <span v-else class="done">已处理</span>
           </template>
           <template v-else-if="row.status === 'PENDING'">
-            <el-button link type="primary" size="small" @click="handle(row, true)">通过</el-button>
-            <el-button link type="danger" size="small" @click="handle(row, false)">驳回</el-button>
+            <el-button v-perm="'admin:audit:record'" link type="primary" size="small" @click="handle(row, true)">通过</el-button>
+            <el-button v-perm="'admin:audit:record'" link type="danger" size="small" @click="handle(row, false)">驳回</el-button>
           </template>
           <span v-else class="done">已处理</span>
         </template>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '../../../store/user'
 import { approveAudit, fetchAudits, firstApproveAudit, rejectAudit } from '../../../api/admin'
@@ -97,7 +97,6 @@ import ReasonInputDialog from '../../../components/ReasonInputDialog.vue'
 const emit = defineEmits(['changed'])
 
 const userStore = useUserStore()
-const role = computed(() => userStore.user?.roleCode)
 
 const items = ref([])
 const total = ref(0)

@@ -44,9 +44,9 @@
       </el-table-column>
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openRole(row)">调整角色</el-button>
-          <el-button link type="primary" size="small" @click="openDevices(row)">登录设备</el-button>
-          <el-button v-if="row.id !== userStore.user?.id" link :type="row.status === 1 ? 'danger' : 'success'" size="small" @click="toggle(row)">
+          <el-button v-perm="'admin:users:role'" link type="primary" size="small" @click="openRole(row)">调整角色</el-button>
+          <el-button v-perm="'admin:users:session'" link type="primary" size="small" @click="openDevices(row)">登录设备</el-button>
+          <el-button v-if="row.id !== userStore.user?.id" v-perm="'admin:users:status'" link :type="row.status === 1 ? 'danger' : 'success'" size="small" @click="toggle(row)">
             {{ row.status === 1 ? '禁用' : '启用' }}
           </el-button>
         </template>
@@ -84,6 +84,7 @@
             <div class="d-meta">IP {{ s.ip || '—' }} · 登录于 {{ formatTime(s.loginAt) }}</div>
           </div>
           <el-button
+            v-perm="'admin:users:session'"
             link type="danger" size="small"
             :disabled="s.current" @click="kickDevice(s)"
           >下线</el-button>

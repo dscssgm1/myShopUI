@@ -49,7 +49,7 @@
       </el-table-column>
       <el-table-column label="操作" width="90" fixed="right">
         <template #default="{ row }">
-          <el-button v-if="row.auditStatus === 'APPROVED'" link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="row.status === 1 ? off(row) : on(row)">
+          <el-button v-if="row.auditStatus === 'APPROVED'" v-perm="'admin:products:status'" link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="row.status === 1 ? off(row) : on(row)">
             {{ row.status === 1 ? '下架' : '上架' }}
           </el-button>
         </template>

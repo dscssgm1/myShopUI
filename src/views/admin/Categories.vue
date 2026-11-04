@@ -6,7 +6,7 @@
           <b>分类管理</b>
           <span class="tip">大类展示在买家端顶部导航；小类展示在大类悬停面板与筛选条件中，保存后立即生效。</span>
         </div>
-        <el-button type="primary" @click="openMajor()">新增大类</el-button>
+        <el-button v-perm="'admin:categories:create'" type="primary" @click="openMajor()">新增大类</el-button>
       </div>
     </template>
 
@@ -16,7 +16,7 @@
           <div class="sub-wrap">
             <div class="sub-head">
               <b>{{ row.icon || '📦' }} {{ row.name }} · 小类</b>
-              <el-button type="primary" plain size="small" @click="openSub(row)">新增小类</el-button>
+              <el-button v-perm="'admin:categories:create'" type="primary" plain size="small" @click="openSub(row)">新增小类</el-button>
             </div>
             <el-table v-if="row.children?.length" :data="row.children" size="small">
               <el-table-column prop="name" label="小类名称" />
@@ -29,8 +29,8 @@
               <el-table-column prop="sort" label="排序" width="90" />
               <el-table-column label="操作" width="140">
                 <template #default="{ row: sub }">
-                  <el-button link type="primary" @click="openSub(row, sub)">编辑</el-button>
-                  <el-button link type="danger" @click="removeCategory(sub, false)">删除</el-button>
+                  <el-button v-perm="'admin:categories:update'" link type="primary" @click="openSub(row, sub)">编辑</el-button>
+                  <el-button v-perm="'admin:categories:delete'" link type="danger" @click="removeCategory(sub, false)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -57,8 +57,8 @@
       </el-table-column>
       <el-table-column label="操作" width="140">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openMajor(row)">编辑</el-button>
-          <el-button link type="danger" @click="removeCategory(row, true)">删除</el-button>
+          <el-button v-perm="'admin:categories:update'" link type="primary" @click="openMajor(row)">编辑</el-button>
+          <el-button v-perm="'admin:categories:delete'" link type="danger" @click="removeCategory(row, true)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

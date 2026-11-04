@@ -4,53 +4,75 @@
       <h3>🎁 积分商城</h3>
       <div class="mall-meta">
         <span>我的积分：<b>{{ points }}</b></span>
-        <span class="tip">商品积分价 = 原价 × 兑换倍率（订单完成后按实付 1 元得 1 积分，会员等级可加成）</span>
+        <span class="tip">订单完成后按实付 1 元得 1 积分，会员等级可加成；积分可兑换优惠券，下单时还能抵现金</span>
         <el-button size="small" plain @click="openExchanges">我的兑换</el-button>
       </div>
     </div>
 
-    <el-empty v-if="!loading && !items.length" description="积分商城暂无商品" />
+    <el-empty v-if="!loading && !items.length" description="积分商城暂无可兑换的优惠券" />
 
     <div v-loading="loading" class="mall-grid">
-      <div v-for="i in items" :key="i.id" class="mall-item">
-        <img v-if="i.productCoverImage" :src="i.productCoverImage" class="m-photo" alt="" />
-        <div v-else class="m-img" :style="{ background: i.productColor }">{{ i.productEmoji }}</div>
-        <div class="m-name">{{ i.productName }}</div>
-        <div class="m-shop">🏪 {{ i.shopName }}</div>
-        <div class="m-price">¥{{ i.productPrice }}</div>
-        <div class="m-points">{{ i.pointsPrice }} 积分</div>
-        <el-button
-          type="danger" size="small"
-          :disabled="!loggedIn || points < i.pointsPrice"
-          @click="openExchange(i)"
-        >{{ !loggedIn ? '登录后兑换' : points >= i.pointsPrice ? '立即兑换' : '积分不足' }}</el-button>
+      <div v-for="i in items" :key="i.templateId" class="mall-coupon">
+        <div class="mc-top">
+          <div class="mc-left">
+            <div class="mc-amount">¥<b>{{ i.discountAmount }}</b></div>
+            <div class="mc-threshold">{{ i.thresholdAmount > 0 ? `满 ${i.thresholdAmount} 可用` : '无门槛' }}</div>
+          </div>
+          <div class="mc-right">
+            <div class="mc-title">
+              {{ i.title }}
+              <el-tag v-if="i.shopId > 0" size="small" type="warning">商家券</el-tag>
+              <el-tag v-else size="small" type="danger">平台券</el-tag>
+            </div>
+            <div class="mc-scope">适用：{{ i.scopeText || '全场通用' }}</div>
+            <div class="mc-time">{{ validEndText(i) }}</div>
+          </div>
+        </div>
+        <div class="mc-bottom">
+          <div class="mc-points">
+            <b>{{ i.pointsPrice }}</b> 积分
+            <span class="mc-stock">剩余 {{ i.remaining ?? i.totalStock }} 张</span>
+            <el-tag v-if="i.perUserLimit > 1" size="small" type="info" effect="plain">限兑 {{ i.perUserLimit }} 张</el-tag>
+          </div>
+          <el-button
+            type="danger" size="small"
+            :disabled="!canExchange(i)"
+            @click="openExchange(i)"
+          >{{ buttonText(i) }}</el-button>
+        </div>
       </div>
     </div>
 
-    <!-- 兑换下单：填写收货信息，生成免支付真实订单 -->
-    <el-dialog v-model="dialog.visible" title="积分兑换" width="440px">
-      <div class="ex-item">
-        <img v-if="dialog.item?.productCoverImage" :src="dialog.item.productCoverImage" class="ex-photo" alt="" />
-        <span v-else class="ex-emoji" :style="{ background: dialog.item?.productColor }">{{ dialog.item?.productEmoji }}</span>
-        <div class="ex-info">
-          <div class="ex-name">{{ dialog.item?.productName }}</div>
-          <div class="ex-cost">消耗 <b>{{ dialog.item?.pointsPrice }}</b> 积分</div>
+    <!-- 兑换确认 -->
+    <el-dialog v-model="dialog.visible" title="积分兑换" width="420px">
+      <template v-if="!dialog.success">
+        <div class="ex-item">
+          <div class="ex-coupon">
+            <div class="ex-amount">¥<b>{{ dialog.item?.discountAmount }}</b></div>
+            <div class="ex-threshold">{{ dialog.item?.thresholdAmount > 0 ? `满 ${dialog.item?.thresholdAmount} 可用` : '无门槛' }}</div>
+          </div>
+          <div class="ex-info">
+            <div class="ex-name">{{ dialog.item?.title }}</div>
+            <div class="ex-cost">消耗 <b>{{ dialog.item?.pointsPrice }}</b> 积分</div>
+            <div class="ex-balance">当前积分：{{ points }}，兑换后剩余 {{ Math.max(points - (dialog.item?.pointsPrice || 0), 0) }}</div>
+          </div>
         </div>
-      </div>
-      <el-form label-width="80px">
-        <el-form-item label="收货人" required>
-          <el-input v-model="form.receiverName" maxlength="50" placeholder="收货人姓名" />
-        </el-form-item>
-        <el-form-item label="手机号" required>
-          <el-input v-model="form.receiverPhone" maxlength="11" placeholder="11 位手机号" />
-        </el-form-item>
-        <el-form-item label="收货地址" required>
-          <el-input v-model="form.receiverAddress" type="textarea" :rows="2" placeholder="省市区 + 详细地址" />
-        </el-form-item>
-      </el-form>
+        <div class="ex-tip">兑换成功后优惠券直接放入「我的优惠券」，下单时可用积分抵现</div>
+      </template>
+      <template v-else>
+        <el-result icon="success" title="兑换成功" sub-title="优惠券已放入我的优惠券">
+          <template #extra>
+            <el-button type="danger" @click="goMyCoupons">去我的优惠券</el-button>
+            <el-button @click="dialog.visible = false">继续逛逛</el-button>
+          </template>
+        </el-result>
+      </template>
+      <!-- #footer 必须是 el-dialog 的直接子节点，不能嵌在 v-if 的 template 里 -->
       <template #footer>
-        <el-button @click="dialog.visible = false">取消</el-button>
-        <el-button type="danger" :loading="dialog.submitting" @click="submitExchange">确认兑换</el-button>
+        <template v-if="!dialog.success">
+          <el-button @click="dialog.visible = false">取消</el-button>
+          <el-button type="danger" :loading="dialog.submitting" @click="submitExchange">确认兑换</el-button>
+        </template>
       </template>
     </el-dialog>
 
@@ -58,17 +80,14 @@
     <el-drawer v-model="drawer.visible" title="我的兑换记录" size="420px">
       <el-empty v-if="!drawer.list.length" description="还没有兑换记录" />
       <div v-for="e in drawer.list" :key="e.id" class="ex-record">
-        <img v-if="e.itemCover" :src="e.itemCover" class="ex-photo" alt="" />
-        <span v-else class="ex-emoji" :style="{ background: '#f7f8fa' }">{{ e.itemEmoji }}</span>
+        <span class="ex-emoji">{{ e.itemEmoji }}</span>
         <div class="ex-info">
           <div class="ex-name">{{ e.itemName }}</div>
           <div class="ex-meta">
             <span>{{ e.createdAt }}</span>
             <span class="ex-points">-{{ e.points }} 积分</span>
           </div>
-          <div class="ex-order">
-            订单：<a @click="$router.push('/user/orders')">{{ e.orderNo }}</a>
-          </div>
+          <div class="ex-order">优惠券已放入「我的优惠券」</div>
         </div>
       </div>
     </el-drawer>
@@ -80,7 +99,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
-import { fetchAddresses, fetchMemberProfile, fetchPointsMallItems, exchangePointsItem, fetchMyExchanges } from '../api/user'
+import { fetchMemberProfile, fetchPointsMallItems, exchangePointsCoupon, fetchMyExchanges } from '../api/user'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -111,49 +130,55 @@ function loadPoints() {
     .catch(() => {})
 }
 
-const dialog = reactive({ visible: false, item: null, submitting: false })
-const form = reactive({ receiverName: '', receiverPhone: '', receiverAddress: '' })
+function validEndText(item) {
+  if (!item.validEnd) return '长期有效'
+  return `${String(item.validEnd).slice(0, 10).replace('T', ' ')} 前有效`
+}
 
-async function openExchange(item) {
+function canExchange(item) {
+  if (!loggedIn.value) return true // 未登录也给点，点了再引导登录
+  if ((item.remaining ?? item.totalStock) <= 0) return false
+  if (item.claimed) return false
+  return points.value >= item.pointsPrice
+}
+
+function buttonText(item) {
+  if (!loggedIn.value) return '登录后兑换'
+  if ((item.remaining ?? item.totalStock) <= 0) return '已兑完'
+  if (item.claimed) return item.perUserLimit > 1 ? '已达限兑' : '已兑换'
+  if (points.value < item.pointsPrice) return '积分不足'
+  return '立即兑换'
+}
+
+const dialog = reactive({ visible: false, item: null, submitting: false, success: false })
+
+function openExchange(item) {
   if (!loggedIn.value) {
     router.push({ name: 'login', query: { redirect: '/points-mall' } })
     return
   }
   dialog.item = item
+  dialog.success = false
   dialog.visible = true
-  // 首次打开用默认收货地址预填，失败静默（用户可手填）
-  if (!form.receiverName) {
-    try {
-      const res = await fetchAddresses({ silent: true })
-      const def = (res.data || []).find((a) => a.isDefault) || (res.data || [])[0]
-      if (def) {
-        form.receiverName = def.receiverName
-        form.receiverPhone = def.receiverPhone
-        form.receiverAddress = def.address
-      }
-    } catch { /* 预填失败不阻塞 */ }
-  }
 }
 
 function submitExchange() {
-  if (!form.receiverName.trim() || !/^1\d{10}$/.test(form.receiverPhone) || !form.receiverAddress.trim()) {
-    ElMessage.warning('请完整填写收货人、11 位手机号和收货地址')
-    return
-  }
   dialog.submitting = true
-  exchangePointsItem({
-    itemId: dialog.item.id,
-    receiverName: form.receiverName.trim(),
-    receiverPhone: form.receiverPhone,
-    receiverAddress: form.receiverAddress.trim()
-  })
-    .then((res) => {
-      dialog.visible = false
-      ElMessage.success(`兑换成功，已生成订单 ${res.data?.orderNo}，商家将尽快发货`)
+  exchangePointsCoupon({ templateId: dialog.item.templateId })
+    .then(() => {
+      dialog.success = true
+      ElMessage.success('兑换成功')
       loadPoints()
       loadDrawer()
+      loadItems() // 剩余量/限兑状态刷新
     })
+    .catch(() => {})
     .finally(() => (dialog.submitting = false))
+}
+
+function goMyCoupons() {
+  dialog.visible = false
+  router.push('/user/coupons')
 }
 
 const drawer = reactive({ visible: false, list: [] })
@@ -202,81 +227,105 @@ function loadDrawer() {
 }
 .mall-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 14px;
   min-height: 120px;
 }
-.mall-item {
-  border: 1px solid #f0f0f0;
+.mall-coupon {
+  border: 1px solid #ffddd5;
   border-radius: 10px;
-  padding: 12px;
-  text-align: center;
+  padding: 14px 16px;
+  background: linear-gradient(90deg, #fff8f6, #fff);
 }
-.m-img {
-  height: 120px;
-  border-radius: 8px;
+.mc-top {
+  display: flex;
+  gap: 14px;
+}
+.mc-left {
+  text-align: center;
+  color: #ff4b2b;
+  min-width: 92px;
+  border-right: 1px dashed #ffd0c4;
+  padding-right: 14px;
+  align-self: center;
+}
+.mc-amount b {
+  font-size: 28px;
+}
+.mc-threshold {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+.mc-right {
+  flex: 1;
+  min-width: 0;
+}
+.mc-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 48px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
-.m-photo {
-  height: 120px;
-  width: 100%;
-  border-radius: 8px;
-  object-fit: cover;
-  display: block;
-}
-.m-name {
-  font-size: 13px;
-  height: 36px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  margin: 8px 0 4px;
-  text-align: left;
-}
-.m-shop {
+.mc-scope {
   font-size: 12px;
   color: #999;
-  text-align: left;
-}
-.m-price {
-  font-size: 12px;
-  color: #999;
-  text-decoration: line-through;
-  text-align: left;
   margin-top: 4px;
 }
-.m-points {
+.mc-time {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 4px;
+}
+.mc-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #ffd0c4;
+}
+.mc-points {
   color: #ff4b2b;
-  font-weight: 700;
-  font-size: 16px;
-  margin: 6px 0;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mc-points b {
+  font-size: 18px;
+}
+.mc-stock {
+  color: #999;
+  font-size: 12px;
 }
 .ex-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
 }
-.ex-emoji {
-  width: 56px;
-  height: 56px;
+.ex-coupon {
+  text-align: center;
+  color: #ff4b2b;
+  background: #fff3f0;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
+  padding: 12px 16px;
   flex-shrink: 0;
 }
-.ex-photo {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  object-fit: cover;
-  flex-shrink: 0;
+.ex-amount b {
+  font-size: 24px;
+}
+.ex-threshold {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+.ex-info {
+  flex: 1;
+  min-width: 0;
 }
 .ex-name {
   font-size: 14px;
@@ -284,17 +333,42 @@ function loadDrawer() {
 }
 .ex-cost {
   font-size: 13px;
-  color: #999;
+  color: #666;
   margin-top: 4px;
 }
 .ex-cost b {
   color: #ff4b2b;
+  font-size: 16px;
+}
+.ex-balance {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+.ex-tip {
+  font-size: 12px;
+  color: #999;
+  background: #f7f8fa;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 14px;
 }
 .ex-record {
   display: flex;
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
+}
+.ex-emoji {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #fff3f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
 }
 .ex-meta {
   display: flex;
@@ -309,10 +383,5 @@ function loadDrawer() {
 .ex-order {
   font-size: 12px;
   color: #666;
-}
-.ex-order a {
-  color: #396afc;
-  cursor: pointer;
-  word-break: break-all;
 }
 </style>

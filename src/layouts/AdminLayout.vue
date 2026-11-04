@@ -36,6 +36,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
 import { fetchAuditPendingSummary } from '../api/admin'
+import { PERM_TREE } from '../perm/tree'
 
 const route = useRoute()
 const router = useRouter()
@@ -45,56 +46,8 @@ const userStore = useUserStore()
 const badges = ref({})
 let badgeTimer = null
 
-const MENUS = {
-  admin: [
-    { path: '/admin', title: '数据看板', icon: '📊' },
-    { path: '/admin/orders', title: '订单管理', icon: '📦' },
-    { path: '/admin/products', title: '商品管理', icon: '🛍️' },
-    { path: '/admin/categories', title: '分类管理', icon: '🗂️' },
-    { path: '/admin/brands', title: '品牌管理', icon: '🏷️' },
-    { path: '/admin/users', title: '用户管理', icon: '👥' },
-    { path: '/admin/shops', title: '商家管理', icon: '🏪' },
-    { path: '/admin/promotions', title: '促销管理', icon: '🎉' },
-    { path: '/admin/coupons', title: '优惠券', icon: '🎫' },
-    { path: '/admin/companies', title: '物流公司', icon: '🚚' },
-    { path: '/admin/audit', title: '审核中心', icon: '✅', badge: true },
-    { path: '/admin/config', title: '运营配置', icon: '⚙️' },
-    { path: '/admin/points-goods', title: '积分商城', icon: '🎁' },
-    { path: '/admin/dividend', title: '分红结算', icon: '💰' },
-    { path: '/admin/commission', title: '商品佣金', icon: '🧾' },
-    { path: '/admin/logs', title: '系统日志', icon: '📜' },
-    { path: '/admin/cs', title: '客服工作台', icon: '🛡️' }
-  ],
-  'admin-sales': [
-    { path: '/admin/shops', title: '商家管理', icon: '🏪' },
-    { path: '/admin/audit', title: '审核中心', icon: '✅', badge: true },
-    { path: '/admin/categories', title: '分类管理', icon: '🗂️' },
-    { path: '/admin/config', title: '运营配置', icon: '⚙️' }
-  ],
-  'admin-cs': [{ path: '/admin/cs', title: '客服工作台', icon: '🛡️' }],
-  'admin-ops': [{ path: '/admin/logs', title: '系统日志', icon: '📜' }],
-  merchant: [
-    { path: '/merchant/shop', title: '店铺信息', icon: '🏪' },
-    { path: '/merchant/products', title: '商品管理', icon: '🛍️' },
-    { path: '/merchant/specs', title: '我的规格', icon: '🏷️' },
-    { path: '/merchant/orders', title: '订单管理', icon: '📦' },
-    { path: '/merchant/marketing', title: '店铺营销', icon: '🎪' },
-    { path: '/merchant/enrollment', title: '活动报名', icon: '📝' },
-    { path: '/merchant/bill', title: '佣金账单', icon: '🧾' },
-    { path: '/merchant/after-sales', title: '售后管理', icon: '🔄' },
-    { path: '/merchant/reviews', title: '评价管理', icon: '⭐' },
-    { path: '/merchant/cs', title: '客服工作台', icon: '🎧' }
-  ],
-  'merchant-sales': [
-    { path: '/merchant/products', title: '商品管理', icon: '🛍️' },
-    { path: '/merchant/orders', title: '订单管理', icon: '📦' },
-    { path: '/merchant/marketing', title: '店铺营销', icon: '🎪' },
-    { path: '/merchant/enrollment', title: '活动报名', icon: '📝' },
-    { path: '/merchant/bill', title: '佣金账单', icon: '🧾' },
-    { path: '/merchant/after-sales', title: '售后管理', icon: '🔄' },
-    { path: '/merchant/reviews', title: '评价管理', icon: '⭐' }
-  ],
-  'merchant-cs': [{ path: '/merchant/cs', title: '客服工作台', icon: '🎧' }],
+// 物流端未接入权限码体系，保持固定菜单；平台/商家端按角色勾选的权限码动态生成
+const LOGISTICS_MENUS = {
   logistics: [
     { path: '/logistics/shipments', title: '运单管理', icon: '🚚' },
     { path: '/logistics/couriers', title: '快递员管理', icon: '👷' },
@@ -112,26 +65,37 @@ const MENU_TITLES = {
   '/admin/users': '用户管理', '/admin/shops': '商家管理', '/admin/promotions': '促销管理',
   '/admin/coupons': '优惠券',
   '/admin/companies': '物流公司', '/admin/audit': '审核中心',
-  '/admin/config': '运营配置', '/admin/points-goods': '积分商城', '/admin/logs': '系统日志', '/admin/cs': '平台客服工作台',
+  '/admin/config': '运营配置', '/admin/logs': '系统日志', '/admin/cs': '平台客服工作台',
   '/admin/dividend': '分红结算',
   '/admin/commission': '商品佣金',
+  '/admin/roles': '角色管理',
+  '/admin/employees': '员工管理',
   '/logistics/dividend': '分红账户',
   '/merchant/shop': '店铺信息',
   '/merchant/products': '商品管理',
+  '/merchant/specs': '我的规格',
   '/merchant/marketing': '店铺营销',
   '/merchant/enrollment': '活动报名',
   '/merchant/orders': '订单管理', '/merchant/bill': '佣金账单', '/merchant/after-sales': '售后管理',
   '/merchant/reviews': '评价管理', '/merchant/cs': '商家客服工作台',
+  '/merchant/roles': '角色管理',
+  '/merchant/staff': '员工管理',
   '/logistics/shipments': '运单管理', '/logistics/couriers': '快递员管理', '/logistics/tasks': '我的任务'
 }
 
 const role = computed(() => userStore.user?.roleCode)
-const menus = computed(() => MENUS[role.value] || [])
+// 菜单 = 权限树中该角色勾选的菜单项（登录时下发 perms，角色配置保存后重新登录/刷新生效）
+const menus = computed(() => {
+  const fixed = LOGISTICS_MENUS[role.value]
+  if (fixed) return fixed
+  const group = route.path.startsWith('/merchant') ? 'MERCHANT' : 'PLATFORM'
+  return (PERM_TREE[group] || []).filter((m) => userStore.perms.includes(m.key))
+})
 const pageTitle = computed(() => MENU_TITLES[route.path] || '')
 
 // 角标 = 审核中心各 Tab 待审核总数，在挂载、切页、每 30 秒轮询与页内审核动作后刷新
 function refreshBadges(e) {
-  if (!['admin', 'admin-sales'].includes(role.value)) return
+  if (!userStore.perms.includes('admin:audit')) return
   const summary = e?.detail
   if (summary) {
     // 审核中心页动作后派发的事件直接携带汇总，免去重复请求

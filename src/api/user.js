@@ -17,14 +17,14 @@ export function fetchPointsLogs(limit = 20) {
   return request.get('/system/member/points/logs', { params: { limit } })
 }
 
-// ==================== 积分商城 ====================
+// ==================== 积分商城（兑换优惠券） ====================
 
 export function fetchPointsMallItems() {
   return request.get('/system/points-mall/items')
 }
 
-/** 兑换：{ itemId, receiverName, receiverPhone, receiverAddress }，返回兑换记录（含订单号） */
-export function exchangePointsItem(data) {
+/** 积分兑换优惠券：{ templateId }，成功后券进「我的优惠券」 */
+export function exchangePointsCoupon(data) {
   return request.post('/system/points-mall/exchange', data)
 }
 

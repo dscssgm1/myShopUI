@@ -37,12 +37,25 @@
         <div class="price-box">
           <div class="row">
             <span class="label">售价</span>
-            <span class="price">¥{{ displayPrice }}</span>
+            <span v-if="bestPrice" class="origin-price">¥{{ displayPrice }}</span>
+            <span class="price">¥{{ bestPrice ? bestPrice.finalPrice : displayPrice }}</span>
+            <span v-if="bestPrice" class="price-tip">单件最低到手价</span>
+          </div>
+          <!-- 单件口径叠加的活动/券明细：券来自当前登录用户已领取的券 -->
+          <div v-if="discountHits.length" class="row">
+            <span class="label">优&nbsp;&nbsp;&nbsp;惠</span>
+            <el-tag
+              v-for="h in discountHits" :key="`${h.kind}-${h.id}`"
+              size="small" :type="h.kind === 'coupon' ? 'warning' : 'danger'" effect="plain"
+              style="margin-right: 6px"
+            >{{ h.kind === 'coupon' ? '券' : '活动' }}「{{ h.title }}」-¥{{ h.amount }}</el-tag>
           </div>
           <div v-if="activityTags.length" class="row">
             <span class="label">促&nbsp;&nbsp;&nbsp;销</span>
             <el-tag v-for="t in activityTags" :key="t" size="small" type="danger" effect="dark" style="margin-right: 6px">{{ t }}</el-tag>
           </div>
+          <!-- 本店在发优惠券：行内直接领取，领取后立即重算最低到手价 -->
+          <ShopCoupons v-if="product.shopId" compact :shop-id="product.shopId" @claimed="loadBestPrice" />
         </div>
 
         <div class="meta">
@@ -174,7 +187,8 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { fetchProductDetail } from '../api/product'
-import { productActivityTags } from '../api/promotion'
+import { fetchProductPrices, productActivityTags } from '../api/promotion'
+import ShopCoupons from '../components/ShopCoupons.vue'
 import { fetchProductReviews, fetchReviewSummary } from '../api/review'
 import { fetchPublicConfig, parseConfigJson } from '../api/config'
 import { addFavorite, fetchFavoriteExists, recordFootprint, removeFavorite } from '../api/user'
@@ -209,6 +223,16 @@ const detailHtml = computed(() => {
 
 // 促销行：商品参加的进行中活动标签（实时匹配，替代原商家维护的 tags）
 const activityTags = ref([])
+
+// ==================== 单件最低到手价 ====================
+/** 按当前 SKU 单件价格计算的活动 + 券到手价；null = 无优惠或计算失败 */
+const bestPrice = ref(null)
+/** 请求序号：切换规格/商品过快时丢弃过期响应 */
+let priceSeq = 0
+const discountHits = computed(() => (bestPrice.value ? [
+  ...(bestPrice.value.promotions || []).map((h) => ({ ...h, kind: 'promotion' })),
+  ...(bestPrice.value.coupons || []).map((h) => ({ ...h, kind: 'coupon' }))
+] : []))
 
 // ==================== 服务保障 ====================
 // 配置中心 service-guarantee 组（key → 名称/图标），商品按 key 关联展示
@@ -284,6 +308,8 @@ watch(() => route.params.id, () => {
 async function load() {
   loading.value = true
   activityTags.value = []
+  bestPrice.value = null
+  priceSeq++ // 作废切换商品前未返回的算价请求
   try {
     const res = await fetchProductDetail(route.params.id)
     product.value = res.data
@@ -296,6 +322,7 @@ async function load() {
     })
     qty.value = 1
     syncUserAsset()
+    loadBestPrice()
   } catch {
     product.value = null
   } finally {
@@ -318,6 +345,38 @@ function syncUserAsset() {
 function selectSpec(name, value) {
   selectedSpecs[name] = value
   qty.value = 1
+  loadBestPrice()
+}
+
+/** 单件口径算价：当前 SKU 价格 + 进行中活动 + 登录用户已领且达门槛的券 */
+async function loadBestPrice() {
+  const p = product.value
+  if (!p) {
+    bestPrice.value = null
+    return
+  }
+  // 与原售价展示保持同一取价口径（SKU 价 → 商家促销价 → 商品价）
+  const unit = Number(currentSku.value?.price ?? p.discountPrice ?? p.price)
+  if (!Number.isFinite(unit) || unit <= 0) {
+    bestPrice.value = null
+    return
+  }
+  const seq = ++priceSeq
+  try {
+    const res = await fetchProductPrices([{
+      productId: p.id,
+      categoryId: p.categoryId,
+      shopId: p.shopId,
+      price: unit,
+      quantity: 1
+    }])
+    if (seq !== priceSeq) return
+    const row = (res.data || [])[0]
+    // 没有优惠时保持原有售价展示，不留「最低价 = 原价」的冗余划线
+    bestPrice.value = row && Number(row.finalPrice) < unit ? row : null
+  } catch {
+    if (seq === priceSeq) bestPrice.value = null
+  }
 }
 
 function requireLogin() {
@@ -530,6 +589,20 @@ const formatTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
   color: #ff4b2b;
   font-size: 28px;
   font-weight: 700;
+}
+.origin-price {
+  color: #bbb;
+  font-size: 15px;
+  text-decoration: line-through;
+  margin-right: 8px;
+}
+.price-tip {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #ff4b2b;
+  background: #ffece6;
+  border-radius: 10px;
+  padding: 2px 8px;
 }
 .meta {
   display: flex;

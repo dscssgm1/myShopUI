@@ -32,14 +32,11 @@
                 <router-link to="/user/address">📍 收货地址</router-link>
                 <router-link to="/points-mall">🎁 积分商城</router-link>
                 <router-link to="/user/more" class="mine-more">🧩 更多功能 ›</router-link>
-                <template v-if="userStore.user?.groupCode === 'LOGISTICS'">
-                  <div class="mine-split" />
-                  <router-link to="/logistics">🚚 物流中心</router-link>
-                </template>
               </div>
             </div>
-            <!-- 商家 / 平台管理入口外置，直接展示在「我的」右侧 -->
+            <!-- 商家 / 物流 / 平台管理入口外置，直接展示在「我的」右侧 -->
             <router-link v-if="userStore.user?.groupCode === 'MERCHANT'" to="/merchant">🏪 商家中心</router-link>
+            <router-link v-if="userStore.user?.groupCode === 'LOGISTICS'" to="/logistics">🚚 物流中心</router-link>
             <router-link v-if="userStore.user?.groupCode === 'PLATFORM'" to="/admin">🛠️ 平台后台</router-link>
           </template>
         </div>
@@ -241,9 +238,6 @@ watch(() => route.fullPath, loadCartCount)
   border-top: 1px solid #f0f0f0;
   color: #ff4b2b;
   font-weight: 600;
-}
-.mine-pop .mine-split {
-  border-top: 1px solid #f0f0f0;
 }
 .mine-entry:hover .mine-pop {
   display: block;
