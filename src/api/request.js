@@ -93,8 +93,8 @@ request.interceptors.response.use(
         notify(backendMessage || '登录已过期，请重新登录')
         localStorage.removeItem('myshop_token')
         localStorage.removeItem('myshop_user')
-        if (!location.pathname.startsWith('/login')) {
-          location.href = '/login'
+        if (!location.pathname.startsWith(`${import.meta.env.BASE_URL}login`)) {
+          location.href = `${import.meta.env.BASE_URL}login`
         }
       }
       return Promise.reject(error)
