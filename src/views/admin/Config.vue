@@ -164,27 +164,6 @@
         </el-form>
       </el-tab-pane>
 
-      <!-- ==================== 折扣规则 ==================== -->
-      <el-tab-pane label="折扣规则" name="discount">
-        <el-form label-width="200px" class="narrow">
-          <el-form-item label="活动与优惠券同享">
-            <el-switch v-model="discountForm['promotion-coupon-stackable']" />
-            <span class="tip-inline">全局开关；关闭后订单在「仅活动」与「仅优惠券」之间自动取优惠更大的一方</span>
-          </el-form-item>
-          <el-form-item label="一单叠加多张优惠券">
-            <el-switch v-model="discountForm['multi-coupon-enabled']" />
-            <span class="tip-inline">关闭后每笔订单只能使用一张优惠券</span>
-          </el-form-item>
-          <el-form-item label="单笔订单最多叠加">
-            <el-input-number v-model="discountForm['max-coupons-per-order']" :min="1" :max="10" :precision="0" class="inline-num" />
-            张优惠券（开启多券叠加后生效）
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" :loading="saving" @click="saveDiscount">保存折扣规则</el-button>
-          </el-form-item>
-        </el-form>
-      </el-tab-pane>
-
       <!-- ==================== 首页 Banner ==================== -->
       <el-tab-pane label="首页 Banner" name="banner">
         <div class="pane-head">
@@ -486,7 +465,7 @@ const levelForm = reactive({
 })
 
 // ==================== 配置组 ====================
-const GROUPS = ['pay-method', 'banner', 'aftersale-reason', 'report-type', 'sensitive-word', 'points-rule', 'dividend', 'discount', 'service-guarantee', 'audit-reject-reason', 'aftersale-reject-reason', 'off-shelf-reason', 'shop-disable-reason', 'system']
+const GROUPS = ['pay-method', 'banner', 'aftersale-reason', 'report-type', 'sensitive-word', 'points-rule', 'dividend', 'service-guarantee', 'audit-reject-reason', 'aftersale-reject-reason', 'off-shelf-reason', 'shop-disable-reason', 'system']
 const groups = reactive(Object.fromEntries(GROUPS.map((g) => [g, []])))
 
 const PAY_DEFS = [
@@ -501,11 +480,6 @@ const guaranteeForm = ref([])
 
 const pointsForm = reactive({ 'earn-amount-per-point': 1, 'mall-rate': 1, 'review-reward': 10 })
 const dividendForm = reactive({ 'platform-ratio': 15 })
-const discountForm = reactive({
-  'promotion-coupon-stackable': true,
-  'multi-coupon-enabled': true,
-  'max-coupons-per-order': 3
-})
 
 const DEFAULT_BANNERS = [
   { title: '双 11 全球狂欢节', subtitle: '每满 300 减 50 · 上不封顶', color: 'linear-gradient(90deg,#ff416c,#ff4b2b)', link: '/products' },
@@ -540,11 +514,6 @@ const DESCRIPTIONS = {
     alipay: '支付宝', wechat: '微信支付', card: '银行卡'
   },
   banner: { default: '首页 Banner' },
-  discount: {
-    'promotion-coupon-stackable': '活动与优惠券是否允许同享',
-    'multi-coupon-enabled': '是否允许一单叠加多张优惠券',
-    'max-coupons-per-order': '单笔订单最多可叠加的优惠券张数'
-  },
   'aftersale-reason': { default: '售后原因' },
   'report-type': { default: '举报类型' },
   'sensitive-word': { default: '敏感词' },
@@ -626,10 +595,6 @@ function hydrate() {
   pointsForm['review-reward'] = numberOr(valueOf('points-rule', 'review-reward', '10'), 10)
 
   dividendForm['platform-ratio'] = numberOr(valueOf('dividend', 'platform-ratio', '15'), 15)
-
-  discountForm['promotion-coupon-stackable'] = valueOf('discount', 'promotion-coupon-stackable', 'true') !== 'false'
-  discountForm['multi-coupon-enabled'] = valueOf('discount', 'multi-coupon-enabled', 'true') !== 'false'
-  discountForm['max-coupons-per-order'] = numberOr(valueOf('discount', 'max-coupons-per-order', '3'), 3)
 
   systemForm.platformName = valueOf('system', 'platformName', 'myShop 电商购物平台')
   systemForm.servicePhone = valueOf('system', 'servicePhone', '400-888-8888')
@@ -888,15 +853,6 @@ function saveDividend() {
   return runSave(() => saveGroup('dividend', {
     'platform-ratio': dividendForm['platform-ratio']
   }), '分红规则已保存')
-}
-
-function saveDiscount() {
-  const maxCoupons = Math.max(1, Math.floor(discountForm['max-coupons-per-order'] || 1))
-  return runSave(() => saveGroup('discount', {
-    'promotion-coupon-stackable': discountForm['promotion-coupon-stackable'] ? 'true' : 'false',
-    'multi-coupon-enabled': discountForm['multi-coupon-enabled'] ? 'true' : 'false',
-    'max-coupons-per-order': maxCoupons
-  }), '折扣规则已保存')
 }
 
 // ==================== Banner ====================

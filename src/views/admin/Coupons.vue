@@ -27,6 +27,15 @@
       <el-table-column label="每人限领" width="90">
         <template #default="{ row }">{{ row.perUserLimit }} 张</template>
       </el-table-column>
+      <el-table-column label="叠加规则" width="150">
+        <template #default="{ row }">
+          <template v-if="row.couponStackable === false || row.stackable === false">
+            <el-tag v-if="row.couponStackable === false" size="small" type="warning" class="mr6">不可与活动同用</el-tag>
+            <el-tag v-if="row.stackable === false" size="small" type="warning">不可叠加</el-tag>
+          </template>
+          <span v-else class="sub">可与活动、多券同用</span>
+        </template>
+      </el-table-column>
       <el-table-column label="有效期" width="210">
         <template #default="{ row }">{{ shortTime(row.validStart) }} ~ {{ shortTime(row.validEnd) }}</template>
       </el-table-column>
@@ -74,6 +83,14 @@
         <el-form-item label="每人限领" required>
           <el-input-number v-model="form.perUserLimit" :min="1" /> 张
         </el-form-item>
+        <el-form-item label="与活动同用">
+          <el-switch v-model="form.couponStackable" />
+          <span class="tip-inline">关闭后此券不能与任何促销活动叠加</span>
+        </el-form-item>
+        <el-form-item label="与其他券叠加">
+          <el-switch v-model="form.stackable" />
+          <span class="tip-inline">关闭后此券一单只能单独使用</span>
+        </el-form-item>
         <el-form-item label="可领时间">
           <el-date-picker v-model="form.validStart" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" style="width: 100%" />
         </el-form-item>
@@ -100,7 +117,8 @@ const dialog = ref(false)
 const form = reactive({
   title: '', thresholdAmount: 0, discountAmount: 10,
   scopeType: 'ALL', scopeIdsText: '',
-  totalStock: 100, perUserLimit: 1, validStart: '', validEnd: ''
+  totalStock: 100, perUserLimit: 1, couponStackable: true, stackable: true,
+  validStart: '', validEnd: ''
 })
 
 onMounted(load)
@@ -125,7 +143,8 @@ function openAdd() {
   Object.assign(form, {
     title: '', thresholdAmount: 0, discountAmount: 10,
     scopeType: 'ALL', scopeIdsText: '',
-    totalStock: 100, perUserLimit: 1, validStart: '', validEnd: ''
+    totalStock: 100, perUserLimit: 1, couponStackable: true, stackable: true,
+    validStart: '', validEnd: ''
   })
   dialog.value = true
 }
@@ -145,6 +164,8 @@ async function save() {
       : [],
     totalStock: form.totalStock,
     perUserLimit: form.perUserLimit,
+    couponStackable: form.couponStackable,
+    stackable: form.stackable,
     validStart: form.validStart || null,
     validEnd: form.validEnd || null,
     status: 'ACTIVE'
@@ -179,5 +200,13 @@ function end(row) {
   font-size: 12px;
   color: #999;
   margin-top: 2px;
+}
+.tip-inline {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #999;
+}
+.mr6 {
+  margin-right: 6px;
 }
 </style>

@@ -48,21 +48,22 @@
     <el-card shadow="never" class="block">
       <template #header>
         <b>优惠券</b>
-        <span class="hint">不选则自动匹配最优组合，可叠加多张（受平台规则限制）</span>
+        <span class="hint">不选则自动匹配最优组合；单笔最多叠加 3 张，以各券叠加规则为准</span>
       </template>
-      <div v-if="multiShop" class="coupon-tip">跨店铺结算暂不支持使用优惠券，请分店铺结算后再选券</div>
-      <el-empty v-else-if="!availableCoupons.length" :image-size="60" description="暂无可用优惠券，去领券中心逛逛" />
+      <el-empty v-if="!availableCoupons.length" :image-size="60" description="暂无可用优惠券，去领券中心逛逛" />
       <el-checkbox-group v-else v-model="selectedCouponIds" class="coupon-list" @change="loadPreview">
         <el-checkbox
           v-for="c in availableCoupons"
           :key="c.userCouponId"
           :value="c.userCouponId"
-          :disabled="Number(c.applicableAmount) <= 0"
+          :disabled="couponDisabled(c)"
           class="coupon-item"
         >
           <div class="coupon-body">
             <span class="c-title">{{ c.title }}</span>
             <el-tag v-if="c.shopId > 0" size="small" type="warning">商家券</el-tag>
+            <el-tag v-if="c.stackable === false" size="small" type="warning">不可叠加</el-tag>
+            <el-tag v-if="c.couponStackable === false" size="small" type="warning">不可与活动同用</el-tag>
             <span class="c-desc">满 {{ c.thresholdAmount }} 减 {{ c.discountAmount }} · {{ c.scopeText }}</span>
             <span v-if="Number(c.applicableAmount) > 0" class="c-apply">本单可抵 ¥{{ c.applicableAmount }}</span>
             <span v-else class="c-no">未满足使用门槛</span>
@@ -116,7 +117,25 @@ const submitting = ref(false)
 const pickerVisible = ref(false)
 const current = ref(null)
 
-const multiShop = computed(() => (preview.value.shops?.length || 0) > 1)
+/** 当前预览中生效的活动优惠（>0 时「不可与活动同用」的券需禁用） */
+const activePromotionDiscount = computed(() => Number(preview.value.promotionDiscount) || 0)
+
+/** 选中的券里是否已含「不可与其他券叠加」的券（是则其余券全部禁选） */
+const hasSoloCouponSelected = computed(() => selectedCouponIds.value.some((id) => {
+  const picked = availableCoupons.value.find((x) => x.userCouponId === id)
+  return picked && picked.stackable === false
+}))
+
+/**
+ * 券可否勾选：不满足门槛、与进行中活动冲突的券直接禁用；
+ * 「不可叠加」券与其他券互斥——选了它，其余券禁选；选了其他券，它禁选。
+ */
+function couponDisabled(c) {
+  if (Number(c.applicableAmount) <= 0) return true
+  if (activePromotionDiscount.value > 0 && c.couponStackable === false) return true
+  if (c.stackable === false) return hasSoloCouponSelected.value
+  return hasSoloCouponSelected.value && !selectedCouponIds.value.includes(c.userCouponId)
+}
 
 onMounted(async () => {
   items.value = JSON.parse(sessionStorage.getItem('ms_checkout_items') || '[]')
@@ -343,10 +362,6 @@ h3 {
 .summary .bear {
   color: #e6a23c;
   font-size: 12px;
-}
-.coupon-tip {
-  font-size: 13px;
-  color: #999;
 }
 .coupon-list {
   display: block;
