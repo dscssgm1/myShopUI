@@ -9,6 +9,7 @@
         <div class="head">
           <router-link :to="`/product/${r.productId}`" class="pname">{{ r.productName }}</router-link>
           <el-tag size="small" :type="statusType(r.status)">{{ statusText(r) }}</el-tag>
+          <el-button link type="danger" size="small" class="del" @click="onDelete(r)">删除</el-button>
           <span class="time">{{ formatTime(r.createdAt) }}</span>
         </div>
         <div class="rate-line">
@@ -46,7 +47,8 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { fetchMyReviews } from '../api/review'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { deleteReview, fetchMyReviews } from '../api/review'
 
 const items = ref([])
 const total = ref(0)
@@ -66,6 +68,28 @@ async function load() {
     items.value = []
   } finally {
     loading.value = false
+  }
+}
+
+/** 删除评价：会扣回评价奖励积分，删除后不可再评价该商品 */
+async function onDelete(r) {
+  try {
+    await ElMessageBox.confirm(
+      '删除后评价不再展示，已发放的评价奖励积分将被扣回，且不能再次评价该商品。确认删除？',
+      '删除评价',
+      { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return // 用户取消
+  }
+  try {
+    await deleteReview(r.id)
+    ElMessage.success('评价已删除')
+    // 删掉当前页最后一条时回退一页，避免停在空白页
+    if (items.value.length === 1 && page.value > 1) page.value -= 1
+    load()
+  } catch {
+    // 失败提示由请求拦截器统一弹出
   }
 }
 
@@ -124,6 +148,10 @@ h3 {
   margin-left: auto;
   font-size: 12px;
   color: #bbb;
+}
+.del {
+  padding: 0;
+  font-size: 12px;
 }
 .rate-line {
   display: flex;

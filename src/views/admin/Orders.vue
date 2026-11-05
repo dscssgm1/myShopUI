@@ -33,11 +33,6 @@
       <el-table-column label="下单时间" width="170">
         <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="100" fixed="right">
-        <template #default="{ row }">
-          <el-button v-if="row.status === 'PAID'" v-perm="'admin:orders:ship'" link type="primary" size="small" @click="ship(row)">发货</el-button>
-        </template>
-      </el-table-column>
     </el-table>
 
     <el-pagination
@@ -50,8 +45,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchAdminOrders, shipOrder } from '../../api/admin'
+import { fetchAdminOrders } from '../../api/admin'
 
 const orders = ref([])
 const total = ref(0)
@@ -77,14 +71,6 @@ async function load() {
     orders.value = res.data?.list || []
     total.value = res.data?.total || 0
   } catch { orders.value = [] } finally { loading.value = false }
-}
-
-function ship(row) {
-  ElMessageBox.confirm(`确认订单 ${row.orderNo} 已发货？`, '发货', { type: 'info' }).then(async () => {
-    await shipOrder(row.orderNo)
-    ElMessage.success('已发货')
-    load()
-  })
 }
 </script>
 

@@ -137,6 +137,7 @@
               <div class="r-head">
                 <b>{{ r.nickname || '匿名用户' }}</b>
                 <el-rate :model-value="reviewOverall(r)" disabled size="small" allow-half />
+                <el-button v-if="isMine(r)" link type="danger" size="small" class="r-del" @click="onDeleteReview(r)">删除</el-button>
                 <span class="r-time">{{ formatTime(r.createdAt) }}</span>
               </div>
               <p class="r-dims">质量 {{ dimText(r.qualityRating) }} · 服务 {{ dimText(r.serviceRating) }} · 物流 {{ dimText(r.logisticsRating) }}</p>
@@ -184,12 +185,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { fetchProductDetail } from '../api/product'
 import { fetchProductPrices, productActivityTags } from '../api/promotion'
 import ShopCoupons from '../components/ShopCoupons.vue'
-import { fetchProductReviews, fetchReviewSummary } from '../api/review'
+import { deleteReview, fetchProductReviews, fetchReviewSummary } from '../api/review'
+import { useUserStore } from '../store/user'
 import { fetchPublicConfig, parseConfigJson } from '../api/config'
 import { addFavorite, fetchFavoriteExists, recordFootprint, removeFavorite } from '../api/user'
 import { addToCart } from '../api/trade'
@@ -198,6 +200,7 @@ import { openShopSession } from '../api/message'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const product = ref(null)
 const loading = ref(false)
 const qty = ref(1)
@@ -486,6 +489,33 @@ const reviewOverall = (r) => {
 }
 const dimText = (v) => (v != null ? Number(v) : '-')
 
+/** 是否本人的评价：只有本人才能删除 */
+const isMine = (r) => !!userStore.user?.id && Number(r.userId) === Number(userStore.user.id)
+
+/** 删除自己的评价：扣回奖励积分，删除后不可再评价该商品 */
+async function onDeleteReview(r) {
+  try {
+    await ElMessageBox.confirm(
+      '删除后评价不再展示，已发放的评价奖励积分将被扣回，且不能再次评价该商品。确认删除？',
+      '删除评价',
+      { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return // 用户取消
+  }
+  try {
+    await deleteReview(r.id)
+    ElMessage.success('评价已删除')
+    loadReviews()
+    // 商品评分随之变化，定向刷新商品详情（保留已选规格）
+    fetchProductDetail(route.params.id).then((res) => {
+      if (res.data) product.value = res.data
+    }).catch(() => {})
+  } catch {
+    // 失败提示由请求拦截器统一弹出
+  }
+}
+
 const formatTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 </script>
 
@@ -768,6 +798,10 @@ const formatTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 .r-time {
   margin-left: auto;
   color: #bbb;
+  font-size: 12px;
+}
+.r-del {
+  padding: 0;
   font-size: 12px;
 }
 .r-content {

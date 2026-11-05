@@ -1,0 +1,60 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: transfer-nginx
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+    # Linux 上容器访问宿主机需要显式映射；Docker Desktop 已内置该域名
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # 前端产物目录挂载到网站根目录：替换文件即生效，无需重建镜像或重启容器
+      - ${FRONTEND_DIR:-/home/transfer/transfer-ui}:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    networks:
+      - app-net
+
+  myshop-nginx:
+    image: nginx:1.27-alpine
+    container_name: myshop-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - /home/myShop/myShopUI/myShopUI:/usr/share/nginx/html:ro
+      - ./myshop-nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - app-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: transfer-mysql
+    # 宿主机上的 Spring Boot 通过 127.0.0.1:3306 连接
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 123543
+      MYSQL_DATABASE: transfer
+      MYSQL_USER: transfer
+      MYSQL_PASSWORD: tranfer123543
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+00:00
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p123543"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - app-net
+
+volumes:
+  mysql-data:
+
+networks:
+  app-net:
+    driver: bridge

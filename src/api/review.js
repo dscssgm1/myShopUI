@@ -23,6 +23,11 @@ export function fetchMyReviews(params) {
   return request.get('/reviews/mine', { params })
 }
 
+/** 删除自己的评价（会扣回评价奖励积分，删除后不可再评价该商品） */
+export function deleteReview(id) {
+  return request.delete(`/reviews/${id}`)
+}
+
 // ==================== 商家 ====================
 
 /** 本店全部评价（含待审核 / 已隐藏） */

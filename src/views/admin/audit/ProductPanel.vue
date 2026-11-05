@@ -156,7 +156,7 @@ const total = ref(0)
 const page = ref(1)
 const size = 10
 const keyword = ref('')
-/** PENDING 新发布待审 / PENDING_EDIT 修改待审核 / APPROVED / REJECTED / '' 全部 */
+/** PENDING 待审核（新发布待审 + 修改待审核）/ PENDING_EDIT 仅修改待审核 / APPROVED / REJECTED / '' 全部 */
 const auditFilter = ref('PENDING')
 const loading = ref(false)
 
@@ -227,7 +227,9 @@ function buildParams() {
     page: page.value,
     size
   }
-  if (auditFilter.value === 'PENDING_EDIT') params.pendingEdit = true
+  // 「待审核」= 新发布待审 + 上架中修改待审核（后端 needsReview 合并查询）
+  if (auditFilter.value === 'PENDING') params.needsReview = true
+  else if (auditFilter.value === 'PENDING_EDIT') params.pendingEdit = true
   else if (auditFilter.value) params.auditStatus = auditFilter.value
   return params
 }

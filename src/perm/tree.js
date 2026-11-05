@@ -13,10 +13,8 @@
 export const PERM_TREE = {
   PLATFORM: [
     { key: 'admin:dashboard', title: '数据看板', path: '/admin', icon: '📊' },
-    {
-      key: 'admin:orders', title: '订单管理', path: '/admin/orders', icon: '📦',
-      buttons: [{ key: 'admin:orders:ship', title: '订单发货' }]
-    },
+    // 平台方只查看订单，发货是商家专属动作（merchant:orders:ship）
+    { key: 'admin:orders', title: '订单管理', path: '/admin/orders', icon: '📦' },
     {
       key: 'admin:products', title: '商品管理', path: '/admin/products', icon: '🛍️',
       buttons: [
